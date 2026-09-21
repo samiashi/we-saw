@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { buildEntries } from "@/lib/analytics";
+import { retryWrite } from "@/lib/retry";
 import {
   defaultPeople,
   emptyData,
@@ -110,6 +111,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [syncError, setSyncError] = useState("");
   const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastLoadAt = useRef(0);
+  const ratingWrites = useRef(new Map<string, Promise<unknown>>());
 
   const loadCloud = useCallback(async () => {
     if (!supabase || !userId) return;
@@ -274,9 +276,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const { error } = await supabase
-      .from("titles")
-      .upsert({ id: key, payload: next, updated_at: new Date().toISOString() });
+    const client = supabase;
+    const { error } = await retryWrite(() =>
+      client
+        .from("titles")
+        .upsert({ id: key, payload: next, updated_at: new Date().toISOString() }),
+    );
     if (error) {
       setSyncError(errorText(error));
       return;
@@ -315,25 +320,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return true;
     }
 
-    const titleWrite = await supabase
-      .from("titles")
-      .upsert({ id: input.title.key, payload: input.title, updated_at: now });
+    const client = supabase;
+    const titleWrite = await retryWrite(() =>
+      client.from("titles").upsert({ id: input.title.key, payload: input.title, updated_at: now }),
+    );
     if (titleWrite.error) {
       setSyncError(errorText(titleWrite.error));
       return false;
     }
 
-    const watchWrite = await supabase.from("watches").insert({
-      id: watch.id,
-      title_id: watch.titleKey,
-      season: watch.seasonNumber,
-      watched_on: watch.watchedOn,
-      note: watch.note,
-      watchers: watch.watchers,
-      picked_by: watch.pickedBy ?? null,
-      created_by: userId,
-      household_id: household?.id ?? null,
-    });
+    const watchWrite = await retryWrite(() =>
+      client.from("watches").insert({
+        id: watch.id,
+        title_id: watch.titleKey,
+        season: watch.seasonNumber,
+        watched_on: watch.watchedOn,
+        note: watch.note,
+        watchers: watch.watchers,
+        picked_by: watch.pickedBy ?? null,
+        created_by: userId,
+        household_id: household?.id ?? null,
+      }),
+    );
     if (watchWrite.error) {
       setSyncError(errorText(watchWrite.error));
       return false;
@@ -349,7 +357,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }));
 
     if (ownRatings.length) {
-      const ratingWrite = await supabase.from("ratings").upsert(ownRatings);
+      const ratingWrite = await retryWrite(() => client.from("ratings").upsert(ownRatings));
       if (ratingWrite.error) setSyncError(errorText(ratingWrite.error));
     }
 
@@ -364,14 +372,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
 
       for (const id of removedIds) {
-        const { error } = await supabase.from("list_items").delete().eq("id", id);
+        const { error } = await retryWrite(() => client.from("list_items").delete().eq("id", id));
         if (error) setSyncError(errorText(error));
       }
       for (const item of changed) {
-        const { error } = await supabase
-          .from("list_items")
-          .update({ status: item.status, updated_at: item.updatedAt })
-          .eq("id", item.id);
+        const { error } = await retryWrite(() =>
+          client
+            .from("list_items")
+            .update({ status: item.status, updated_at: item.updatedAt })
+            .eq("id", item.id),
+        );
         if (error) setSyncError(errorText(error));
       }
       setData((current) => ({ ...current, listItems: nextItems }));
@@ -396,26 +406,44 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     if (targetUserId !== userId) return false;
 
+    const client = supabase;
     const previous =
       data.ratings.find((rating) => rating.watchId === watchId && rating.userId === targetUserId) ??
       null;
     setData((current) => withRating(current, next));
 
-    const { error } = await supabase
-      .from("ratings")
-      .upsert({ watch_id: watchId, user_id: targetUserId, score, updated_at: next.updatedAt });
+    const key = `${watchId}:${targetUserId}`;
+    const queued = (ratingWrites.current.get(key) ?? Promise.resolve())
+      .catch(() => undefined)
+      .then(() =>
+        retryWrite(() =>
+          client.from("ratings").upsert({
+            watch_id: watchId,
+            user_id: targetUserId,
+            score,
+            updated_at: next.updatedAt,
+          }),
+        ),
+      );
+    ratingWrites.current.set(key, queued);
+
+    const { error } = await queued;
+    const isLatest = ratingWrites.current.get(key) === queued;
+    if (isLatest) ratingWrites.current.delete(key);
     if (error) {
       setSyncError(errorText(error));
-      setData((current) =>
-        previous
-          ? withRating(current, previous)
-          : {
-              ...current,
-              ratings: current.ratings.filter(
-                (rating) => !(rating.watchId === watchId && rating.userId === targetUserId),
-              ),
-            },
-      );
+      if (isLatest) {
+        setData((current) =>
+          previous
+            ? withRating(current, previous)
+            : {
+                ...current,
+                ratings: current.ratings.filter(
+                  (rating) => !(rating.watchId === watchId && rating.userId === targetUserId),
+                ),
+              },
+        );
+      }
       return false;
     }
     return true;
@@ -431,7 +459,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return true;
     }
 
-    const { error } = await supabase.from("watches").delete().eq("id", watchId);
+    const client = supabase;
+    const { error } = await retryWrite(() => client.from("watches").delete().eq("id", watchId));
     if (error) {
       setSyncError(errorText(error));
       return false;
@@ -459,10 +488,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
 
     if (personId !== userId) return;
-    const { error } = await supabase
-      .from("members")
-      .update({ display_name: trimmed })
-      .eq("user_id", personId);
+    const client = supabase;
+    const { error } = await retryWrite(() =>
+      client.from("members").update({ display_name: trimmed }).eq("user_id", personId),
+    );
     if (error) {
       setSyncError(errorText(error));
       return;
@@ -502,21 +531,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return true;
     }
 
-    const titleWrite = await supabase
-      .from("titles")
-      .upsert({ id: title.key, payload: title, updated_at: now });
+    const client = supabase;
+    const titleWrite = await retryWrite(() =>
+      client.from("titles").upsert({ id: title.key, payload: title, updated_at: now }),
+    );
     if (titleWrite.error) {
       setSyncError(errorText(titleWrite.error));
       return false;
     }
 
-    const listWrite = await supabase.from("list_items").insert({
-      id: item.id,
-      title_id: item.titleKey,
-      status: item.status,
-      added_by: userId,
-      household_id: household?.id ?? null,
-    });
+    const listWrite = await retryWrite(() =>
+      client.from("list_items").insert({
+        id: item.id,
+        title_id: item.titleKey,
+        status: item.status,
+        added_by: userId,
+        household_id: household?.id ?? null,
+      }),
+    );
     if (listWrite.error) {
       setSyncError(errorText(listWrite.error));
       return false;
@@ -543,10 +575,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const { error } = await supabase
-      .from("list_items")
-      .update({ status, updated_at: now })
-      .eq("id", itemId);
+    const client = supabase;
+    const { error } = await retryWrite(() =>
+      client.from("list_items").update({ status, updated_at: now }).eq("id", itemId),
+    );
     if (error) {
       setSyncError(errorText(error));
       return;
@@ -568,7 +600,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return true;
     }
 
-    const { error } = await supabase.from("list_items").delete().eq("id", itemId);
+    const client = supabase;
+    const { error } = await retryWrite(() => client.from("list_items").delete().eq("id", itemId));
     if (error) {
       setSyncError(errorText(error));
       return false;
@@ -587,9 +620,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   async function createInvite(): Promise<string | null> {
     if (mode !== "cloud" || !supabase || !userId) return null;
     const code = generateInviteCode();
-    const { error } = await supabase
-      .from("invite_codes")
-      .insert({ code, created_by: userId, household_id: household?.id ?? null });
+    const client = supabase;
+    const { error } = await retryWrite(() =>
+      client
+        .from("invite_codes")
+        .insert({ code, created_by: userId, household_id: household?.id ?? null }),
+    );
     if (error) {
       setSyncError(errorText(error));
       return null;
@@ -600,7 +636,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   async function revokeInvite(code: string) {
     if (mode !== "cloud" || !supabase) return false;
-    const { error } = await supabase.from("invite_codes").delete().eq("code", code);
+    const client = supabase;
+    const { error } = await retryWrite(() => client.from("invite_codes").delete().eq("code", code));
     if (error) {
       setSyncError(errorText(error));
       return false;
@@ -611,10 +648,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   async function redeemInvite(code: string, displayName: string): Promise<string | null> {
     if (mode !== "cloud" || !supabase) return "Cloud sync is not configured.";
-    const { error } = await supabase.rpc("redeem_invite", {
-      invite_code: code,
-      display_name: displayName,
-    });
+    const client = supabase;
+    const { error } = await retryWrite(() =>
+      client.rpc("redeem_invite", {
+        invite_code: code,
+        display_name: displayName,
+      }),
+    );
     if (error) return errorText(error);
     await loadCloud();
     return null;
@@ -626,11 +666,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     inviteCode: string,
   ): Promise<string | null> {
     if (mode !== "cloud" || !supabase) return "Cloud sync is not configured.";
-    const { error } = await supabase.rpc("create_household", {
-      household_name: householdName,
-      display_name: displayName,
-      invite_code: inviteCode.trim() || null,
-    });
+    const client = supabase;
+    const { error } = await retryWrite(() =>
+      client.rpc("create_household", {
+        household_name: householdName,
+        display_name: displayName,
+        invite_code: inviteCode.trim() || null,
+      }),
+    );
     if (error) return errorText(error);
     await loadCloud();
     return null;
@@ -639,10 +682,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   async function renameHousehold(name: string) {
     const trimmed = name.trim();
     if (!trimmed || mode !== "cloud" || !supabase || !household) return;
-    const { error } = await supabase
-      .from("households")
-      .update({ name: trimmed })
-      .eq("id", household.id);
+    const client = supabase;
+    const { error } = await retryWrite(() =>
+      client.from("households").update({ name: trimmed }).eq("id", household.id),
+    );
     if (error) {
       setSyncError(errorText(error));
       return;
@@ -652,7 +695,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   async function createAppInvite(): Promise<string | null> {
     if (mode !== "cloud" || !supabase) return null;
-    const { data, error } = await supabase.rpc("create_app_invite");
+    const client = supabase;
+    const { data, error } = await retryWrite(() => client.rpc("create_app_invite"));
     if (error) {
       setSyncError(errorText(error));
       return null;
@@ -663,7 +707,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   async function revokeAppInvite(code: string) {
     if (mode !== "cloud" || !supabase) return false;
-    const { error } = await supabase.from("app_invites").delete().eq("code", code);
+    const client = supabase;
+    const { error } = await retryWrite(() => client.from("app_invites").delete().eq("code", code));
     if (error) {
       setSyncError(errorText(error));
       return false;
