@@ -67,7 +67,7 @@ export interface WeSawStore {
   nameFor: (userId: string) => string;
   canEditScore: (userId: string, watchers: string[]) => boolean;
   logWatch: (input: LogInput) => Promise<boolean>;
-  setRating: (watchId: string, userId: string, score: number) => Promise<void>;
+  setRating: (watchId: string, userId: string, score: number) => Promise<boolean>;
   removeWatch: (watchId: string) => Promise<boolean>;
   patchTitle: (key: string, patch: Partial<Title>) => Promise<void>;
   renamePerson: (personId: string, name: string) => Promise<void>;
@@ -381,7 +381,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return true;
   }
 
-  async function setRating(watchId: string, targetUserId: string, score: number) {
+  async function setRating(watchId: string, targetUserId: string, score: number): Promise<boolean> {
     const next: Rating = {
       watchId,
       userId: targetUserId,
@@ -391,18 +391,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     if (mode === "local" || !supabase) {
       setData((current) => withRating(current, next));
-      return;
+      return true;
     }
 
-    if (targetUserId !== userId) return;
+    if (targetUserId !== userId) return false;
+
+    const previous =
+      data.ratings.find((rating) => rating.watchId === watchId && rating.userId === targetUserId) ??
+      null;
+    setData((current) => withRating(current, next));
+
     const { error } = await supabase
       .from("ratings")
       .upsert({ watch_id: watchId, user_id: targetUserId, score, updated_at: next.updatedAt });
     if (error) {
       setSyncError(errorText(error));
-      return;
+      setData((current) =>
+        previous
+          ? withRating(current, previous)
+          : {
+              ...current,
+              ratings: current.ratings.filter(
+                (rating) => !(rating.watchId === watchId && rating.userId === targetUserId),
+              ),
+            },
+      );
+      return false;
     }
-    setData((current) => withRating(current, next));
+    return true;
   }
 
   async function removeWatch(watchId: string) {
