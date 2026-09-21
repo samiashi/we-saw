@@ -102,6 +102,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [invites, setInvites] = useState<InviteCode[]>([]);
   const [appInvites, setAppInvites] = useState<AppInvite[]>([]);
   const [household, setHousehold] = useState<Household | null>(null);
+  const householdId = household?.id ?? null;
   const [ready, setReady] = useState(mode === "local");
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [partnerJoined, setPartnerJoined] = useState(false);
@@ -206,8 +207,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       .on("postgres_changes", { event: "*", schema: "public", table: "titles" }, schedule)
       .on("postgres_changes", { event: "*", schema: "public", table: "ratings" }, handleRating);
 
-    if (household) {
-      const filter = `household_id=eq.${household.id}`;
+    if (householdId) {
+      const filter = `household_id=eq.${householdId}`;
       channel
         .on(
           "postgres_changes",
@@ -239,7 +240,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("focus", onFocus);
       void client.removeChannel(channel);
     };
-  }, [mode, userId, household, loadCloud]);
+  }, [mode, userId, householdId, loadCloud]);
 
   useEffect(() => {
     if (mode !== "local") return;
