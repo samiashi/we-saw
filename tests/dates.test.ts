@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { localDateString } from "@/lib/dates";
+import { formatWatchDate, localDateString } from "@/lib/dates";
 
 describe("localDateString", () => {
   it("keeps the local calendar day around midnight", () => {
@@ -12,5 +12,11 @@ describe("localDateString", () => {
 
   it("pads months and days", () => {
     expect(localDateString(new Date(2026, 8, 3, 12, 0))).toBe("2026-09-03");
+  });
+});
+
+describe("formatWatchDate", () => {
+  it("labels an unknown date instead of guessing", () => {
+    expect(formatWatchDate(null)).toBe("Date unknown");
   });
 });

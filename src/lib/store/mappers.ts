@@ -23,7 +23,7 @@ export function mapWatch(row: Row, memberIds: string[]): Watch {
     id: String(row.id),
     titleKey: String(row.title_id),
     seasonNumber: row.season == null ? null : Number(row.season),
-    watchedOn: String(row.watched_on),
+    watchedOn: row.watched_on == null ? null : String(row.watched_on),
     note: String(row.note ?? ""),
     watchers:
       Array.isArray(row.watchers) && row.watchers.length ? (row.watchers as string[]) : memberIds,

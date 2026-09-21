@@ -137,7 +137,9 @@ Multi-tenant by **household**. Every user-data table carries `household_id` and 
 - `titles` — TMDB metadata cached as JSON, keyed `movie:<id>` / `tv:<id>`, shared across households.
 - `watches` — one row per movie or TV season, scoped by `household_id`. `watchers uuid[]` is who
   watched, `picked_by` is who chose it. A joint watch has every member, a solo watch has one.
-  Logging reconciles Up Next: movies flip to `done`, a logged season moves the show to `watching`.
+  `watched_on` is nullable: null means "Not sure", and date-based analytics skip those rows while
+  ratings/taste stats still count them. Logging reconciles Up Next: movies flip to `done`, a logged
+  season moves the show to `watching`.
 - `ratings` — `(watch_id, user_id)` primary key, score 1–10. RLS: you can only rate watches you are
   a watcher of, and only as yourself.
 - `list_items` — Up Next entries, unique per `(household_id, title_id)`, status
@@ -153,10 +155,10 @@ Local mode mirrors the same shape in `localStorage` key `wesaw.data.v1` (see `We
 (never edit an applied migration), plus the matching load/map code in `src/lib/store.tsx`. New
 user-data tables must ship `household_id` and household-scoped policies in the same migration.
 
-Migrations are applied to the linked Supabase project (the initial schema, `restrict_anon_execute`
-and `fix_tenant_scoping`). They are append-only — add a new timestamped file for every change, never
-edit one that has been applied. Use `supabase db push` for remote changes and keep `supabase/.temp`
-untracked.
+Migrations are applied to the linked Supabase project (the initial schema, `restrict_anon_execute`,
+`fix_tenant_scoping` and `unknown_watch_dates`). They are append-only — add a new timestamped file
+for every change, never edit one that has been applied. Use `supabase db push` for remote changes
+and keep `supabase/.temp` untracked.
 
 ## Analytics and the taste engine
 
@@ -167,7 +169,8 @@ untracked.
   (prior weight 2 toward the person's mean). `predictScore`, `rankPicks` (safe = min predicted),
   `topGenreOverlap` (reason strings), `predictionAccuracy` (leave-one-out, needs 5+ ratings).
 - Watch time: movie = runtime; TV = per-episode runtime × episode count of the logged season.
-- Year filters use the **watch date** year (`watchedOn.slice(0, 4)`), not release year.
+- Year filters use the **watch date** year (`watchedOn.slice(0, 4)`), not release year. Watches with
+  no date ("Not sure", `watchedOn == null`) are excluded from every date-based stat.
 - Habit analytics: `activityHeatmap` (53 weeks, Monday-first), `weekdayCounts`, `watchStreaks`
   (consecutive weeks), and `queueStats` (median added→watched lag, oldest waiting item, abandon
   share). All take an injectable `now` for tests.

@@ -58,7 +58,7 @@ export interface Watch {
   id: string;
   titleKey: string;
   seasonNumber: number | null;
-  watchedOn: string;
+  watchedOn: string | null;
   note: string;
   watchers: string[];
   pickedBy?: string | null;
@@ -81,7 +81,7 @@ export interface Person {
 export interface LogInput {
   title: Title;
   seasonNumber: number | null;
-  watchedOn: string;
+  watchedOn: string | null;
   note: string;
   watchers: string[];
   pickedBy: string | null;

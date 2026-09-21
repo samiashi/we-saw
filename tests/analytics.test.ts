@@ -28,6 +28,7 @@ import {
   rankPicks,
   ratingDistribution,
   rewatchStats,
+  scoreStats,
   soloEntries,
   totalMinutes,
   watchMinutes,
@@ -189,6 +190,64 @@ describe("watch time", () => {
     expect(formatMinutes(59.6)).toBe("1h");
     expect(formatMinutes(1440)).toBe("1d");
     expect(formatMinutes(1470)).toBe("1d 30m");
+  });
+});
+
+describe("unknown watch dates", () => {
+  const undated = buildEntries(
+    titles,
+    [
+      watch({ id: "u1", titleKey: "movie:1", watchedOn: null }),
+      watch({ id: "u2", titleKey: "movie:2", watchedOn: "2026-06-15" }),
+    ],
+    [rating("u1", "a", 9), rating("u2", "a", 4)],
+  );
+
+  it("keeps undated watches out of date-based stats", () => {
+    expect(yearsPresent(undated)).toEqual(["2026"]);
+    expect(yearEntries(undated, "2026").map((entry) => entry.watch.id)).toEqual(["u2"]);
+
+    const heatmap = activityHeatmap(undated, 53, new Date(2026, 5, 30));
+    expect(heatmap.activeDays).toBe(1);
+    expect(weekdayCounts(undated).reduce((sum, row) => sum + row.count, 0)).toBe(1);
+    expect(watchStreaks(undated, new Date(2026, 5, 30)).current).toBe(0);
+  });
+
+  it("still counts undated watches in rating stats", () => {
+    expect(scoreStats(undated, makeScorer("a")).count).toBe(2);
+    expect(genreStats(undated, makeScorer("a"))[0].count).toBe(2);
+  });
+
+  it("sorts undated watches by when they were logged", () => {
+    const fresh = buildEntries(
+      titles,
+      [
+        watch({
+          id: "u3",
+          titleKey: "movie:1",
+          watchedOn: null,
+          createdAt: "2027-01-01T00:00:00.000Z",
+        }),
+        watch({ id: "u4", titleKey: "movie:2", watchedOn: "2026-06-15" }),
+      ],
+      [],
+    );
+    expect(fresh.map((entry) => entry.watch.id)).toEqual(["u3", "u4"]);
+    expect(undated.map((entry) => entry.watch.id)).toEqual(["u2", "u1"]);
+  });
+
+  it("ignores undated watches when measuring queue lag", () => {
+    const items: ListItem[] = [
+      {
+        id: "u",
+        titleKey: "movie:1",
+        status: "done",
+        addedBy: "a",
+        createdAt: new Date(2026, 5, 1).toISOString(),
+        updatedAt: "2026-06-01T00:00:00.000Z",
+      },
+    ];
+    expect(queueStats(items, undated, new Date(2026, 5, 30)).sampleSize).toBe(0);
   });
 });
 

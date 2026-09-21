@@ -60,7 +60,7 @@ export function createRealtimeHandlers({
       id: String(row.id),
       titleKey: String(row.title_id),
       seasonNumber: row.season == null ? null : Number(row.season),
-      watchedOn: String(row.watched_on),
+      watchedOn: row.watched_on == null ? null : String(row.watched_on),
       note: String(row.note ?? ""),
       watchers: (row.watchers as string[] | null) ?? [],
       pickedBy: (row.picked_by as string | null) ?? null,

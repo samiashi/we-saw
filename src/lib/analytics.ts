@@ -13,6 +13,12 @@ export function mean(values: number[]): number {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
+function sortDate(entry: Entry): string {
+  if (entry.watch.watchedOn) return entry.watch.watchedOn;
+  const created = new Date(entry.watch.createdAt);
+  return Number.isNaN(created.getTime()) ? "" : localDateString(created);
+}
+
 export function buildEntries(titles: Title[], watches: Watch[], ratings: Rating[]): Entry[] {
   const titlesByKey = new Map(titles.map((title) => [title.key, title]));
   const ratingsByWatch = new Map<string, Record<string, number>>();
@@ -37,8 +43,7 @@ export function buildEntries(titles: Title[], watches: Watch[], ratings: Rating[
 
   return entries.sort(
     (a, b) =>
-      b.watch.watchedOn.localeCompare(a.watch.watchedOn) ||
-      b.watch.createdAt.localeCompare(a.watch.createdAt),
+      sortDate(b).localeCompare(sortDate(a)) || b.watch.createdAt.localeCompare(a.watch.createdAt),
   );
 }
 
@@ -283,7 +288,9 @@ export function monthlyCounts(
 
   const byKey = new Map(buckets.map((bucket) => [bucket.key, bucket]));
   for (const entry of entries) {
-    const bucket = byKey.get(entry.watch.watchedOn.slice(0, 7));
+    const watchedOn = entry.watch.watchedOn;
+    if (!watchedOn) continue;
+    const bucket = byKey.get(watchedOn.slice(0, 7));
     if (bucket) bucket.count += 1;
   }
 
@@ -291,11 +298,11 @@ export function monthlyCounts(
 }
 
 export function watchYear(entry: Entry): string {
-  return entry.watch.watchedOn.slice(0, 4);
+  return entry.watch.watchedOn?.slice(0, 4) ?? "";
 }
 
 export function yearsPresent(entries: Entry[]): string[] {
-  return [...new Set(entries.map(watchYear))].sort((a, b) => b.localeCompare(a));
+  return [...new Set(entries.map(watchYear).filter(Boolean))].sort((a, b) => b.localeCompare(a));
 }
 
 export function yearEntries(entries: Entry[], year: string): Entry[] {
@@ -317,7 +324,9 @@ export function monthsForYear(
 
   const byKey = new Map(buckets.map((bucket) => [bucket.key, bucket]));
   for (const entry of entries) {
-    const bucket = byKey.get(entry.watch.watchedOn.slice(0, 7));
+    const watchedOn = entry.watch.watchedOn;
+    if (!watchedOn) continue;
+    const bucket = byKey.get(watchedOn.slice(0, 7));
     if (bucket) bucket.count += 1;
   }
 
@@ -347,7 +356,9 @@ export function activityHeatmap(
 ): { weeks: HeatmapWeek[]; activeDays: number; max: number } {
   const counts = new Map<string, number>();
   for (const entry of entries) {
-    counts.set(entry.watch.watchedOn, (counts.get(entry.watch.watchedOn) ?? 0) + 1);
+    const watchedOn = entry.watch.watchedOn;
+    if (!watchedOn) continue;
+    counts.set(watchedOn, (counts.get(watchedOn) ?? 0) + 1);
   }
 
   const currentWeekStart = startOfWeek(now);
@@ -392,7 +403,9 @@ export function weekdayCounts(entries: Entry[]): { day: string; count: number }[
   const counts = [0, 0, 0, 0, 0, 0, 0];
 
   for (const entry of entries) {
-    const date = new Date(`${entry.watch.watchedOn}T00:00:00`);
+    const watchedOn = entry.watch.watchedOn;
+    if (!watchedOn) continue;
+    const date = new Date(`${watchedOn}T00:00:00`);
     if (Number.isNaN(date.getTime())) continue;
     counts[(date.getDay() + 6) % 7] += 1;
   }
@@ -407,7 +420,9 @@ export function watchStreaks(
   const weekKeys = new Set<string>();
 
   for (const entry of entries) {
-    const date = new Date(`${entry.watch.watchedOn}T00:00:00`);
+    const watchedOn = entry.watch.watchedOn;
+    if (!watchedOn) continue;
+    const date = new Date(`${watchedOn}T00:00:00`);
     if (Number.isNaN(date.getTime())) continue;
     weekKeys.add(localDateString(startOfWeek(date)));
   }
@@ -466,9 +481,11 @@ export function queueStats(items: ListItem[], entries: Entry[], now = new Date()
   const firstWatch = new Map<string, string>();
 
   for (const entry of entries) {
+    const watchedOn = entry.watch.watchedOn;
+    if (!watchedOn) continue;
     const existing = firstWatch.get(entry.watch.titleKey);
-    if (!existing || entry.watch.watchedOn < existing) {
-      firstWatch.set(entry.watch.titleKey, entry.watch.watchedOn);
+    if (!existing || watchedOn < existing) {
+      firstWatch.set(entry.watch.titleKey, watchedOn);
     }
   }
 
@@ -756,7 +773,9 @@ export function compareMonthly(
   const [first, second] = people;
 
   for (const entry of entries) {
-    const bucket = byKey.get(entry.watch.watchedOn.slice(0, 7));
+    const watchedOn = entry.watch.watchedOn;
+    if (!watchedOn) continue;
+    const bucket = byKey.get(watchedOn.slice(0, 7));
     if (!bucket) continue;
     if (entry.watch.watchers.length > 1) bucket.joint += 1;
     else if (first && entry.watch.watchers[0] === first.id) bucket.a += 1;

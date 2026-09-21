@@ -49,7 +49,7 @@ export function LogView() {
       .sort(
         (a, b) =>
           (b.combined ?? 0) - (a.combined ?? 0) ||
-          b.watch.watchedOn.localeCompare(a.watch.watchedOn),
+          (b.watch.watchedOn ?? "").localeCompare(a.watch.watchedOn ?? ""),
       );
     return loved[0]?.title ?? null;
   }, [entries]);

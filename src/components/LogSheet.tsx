@@ -30,6 +30,7 @@ export function LogSheet({
   const [loading, setLoading] = useState(true);
   const [seasonNumber, setSeasonNumber] = useState<number | null>(null);
   const [date, setDate] = useState(localDateString());
+  const [dateUnknown, setDateUnknown] = useState(false);
   const [note, setNote] = useState("");
   const [watchMode, setWatchMode] = useState("together");
   const [pickedBy, setPickedBy] = useState<string | null>(null);
@@ -100,7 +101,7 @@ export function LogSheet({
     const saved = await logWatch({
       title,
       seasonNumber: title.type === "tv" ? seasonNumber : null,
-      watchedOn: date || localDateString(),
+      watchedOn: dateUnknown ? null : date || localDateString(),
       note,
       watchers,
       pickedBy,
@@ -236,15 +237,34 @@ export function LogSheet({
             ) : null}
 
             <div className="flex flex-col gap-2">
-              <label className="text-muted text-[13px]" htmlFor="watch-date">
-                Watched on
-              </label>
-              <Input
-                id="watch-date"
-                type="date"
-                value={date}
-                onChange={(event) => setDate(event.target.value)}
-              />
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-muted text-[13px]" htmlFor="watch-date">
+                  Watched on
+                </label>
+                <button
+                  type="button"
+                  className={cn(
+                    "border-line text-muted rounded-full border px-2.5 py-1 text-xs transition-colors",
+                    dateUnknown && "border-accent bg-accent/8 text-ink",
+                  )}
+                  aria-pressed={dateUnknown}
+                  onClick={() => setDateUnknown((current) => !current)}
+                >
+                  Not sure
+                </button>
+              </div>
+              {dateUnknown ? (
+                <p className="text-muted text-[13px]">
+                  No date — it won't appear in date-based charts.
+                </p>
+              ) : (
+                <Input
+                  id="watch-date"
+                  type="date"
+                  value={date}
+                  onChange={(event) => setDate(event.target.value)}
+                />
+              )}
             </div>
 
             <div className="flex flex-col gap-2">

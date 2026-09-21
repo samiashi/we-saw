@@ -51,7 +51,7 @@ export function useStatsData({
     () =>
       entries.filter(
         (entry) =>
-          (yearFilter === "all" || entry.watch.watchedOn.startsWith(yearFilter)) &&
+          (yearFilter === "all" || (entry.watch.watchedOn?.startsWith(yearFilter) ?? false)) &&
           (typeFilter === "all" || entry.title.type === typeFilter),
       ),
     [entries, yearFilter, typeFilter],
@@ -126,7 +126,9 @@ export function useStatsData({
     }));
     const byKey = new Map(rows.map((row) => [row.key, row]));
     for (const entry of scoped) {
-      const bucket = byKey.get(entry.watch.watchedOn.slice(0, 7));
+      const watchedOn = entry.watch.watchedOn;
+      if (!watchedOn) continue;
+      const bucket = byKey.get(watchedOn.slice(0, 7));
       if (!bucket) continue;
       const entryMinutes = watchMinutes(entry) ?? 0;
       if (entry.title.type === "movie") bucket.movie += entryMinutes;

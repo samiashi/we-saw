@@ -14,7 +14,7 @@ A shared movie and TV diary for couples and small groups: log what you watched, 
 
 ## Features
 
-- Search movies and shows (TMDB), log a movie or a single TV season with the date and a note.
+- Search movies and shows (TMDB), log a movie or a single TV season with the date (or "Not sure") and a note.
 - **Multi-household**: every group gets its own private data; friends start their own household with a friend-invite code you generate.
 - **Up Next** tab: queue titles, mark what's watching, and drop what you bailed on — logging a movie removes it, logging a season moves it to Watching.
 - **Tonight's pick**: a taste engine builds a genre/actor/director profile per person and ranks your list by the safer minimum score, with a reason line.
