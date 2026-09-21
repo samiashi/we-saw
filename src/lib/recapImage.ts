@@ -115,7 +115,7 @@ export async function renderRecapImage(data: RecapImageData): Promise<Blob | nul
 
   ctx.fillStyle = "#9aa1b1";
   ctx.font = `600 30px ${FONT}`;
-  ctx.fillText("OUR YEAR IN WATCHLOG", PAD, 128);
+  ctx.fillText("OUR YEAR IN WE SAW", PAD, 128);
 
   ctx.fillStyle = "#e8b64c";
   ctx.font = `700 188px ${FONT}`;

@@ -4,6 +4,10 @@ import { useStore } from "@/lib/store";
 import type { Entry } from "@/lib/types";
 import { Poster } from "@/components/Poster";
 import { ScoreChip } from "@/components/ScoreChip";
+import { cn } from "@/lib/utils";
+
+const cardClass =
+  "border-line bg-surface flex h-full w-full items-center gap-3 rounded-2xl border p-3 text-left transition-colors";
 
 export function WatchCard({ entry, onOpen }: { entry: Entry; onOpen?: (entry: Entry) => void }) {
   const { nameFor } = useStore();
@@ -11,12 +15,8 @@ export function WatchCard({ entry, onOpen }: { entry: Entry; onOpen?: (entry: En
   const critic = entry.title.critic;
   const watchers = entry.watch.watchers;
 
-  return (
-    <button
-      type="button"
-      className="border-line bg-surface hover:border-line/80 flex h-full w-full items-center gap-3 rounded-2xl border p-3 text-left transition-colors"
-      onClick={() => onOpen?.(entry)}
-    >
+  const content = (
+    <>
       <Poster title={entry.title} variant="small" />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 self-stretch">
         <div className="flex items-baseline justify-between gap-2">
@@ -61,6 +61,18 @@ export function WatchCard({ entry, onOpen }: { entry: Entry; onOpen?: (entry: En
           ) : null}
         </div>
       </div>
+    </>
+  );
+
+  if (!onOpen) return <div className={cardClass}>{content}</div>;
+
+  return (
+    <button
+      type="button"
+      className={cn(cardClass, "hover:border-line/80")}
+      onClick={() => onOpen(entry)}
+    >
+      {content}
     </button>
   );
 }
