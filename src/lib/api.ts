@@ -25,8 +25,11 @@ export type ProvidersByRegion = Record<string, RegionProviders>;
 const AIR_TTL_MS = 30 * 60 * 1000;
 const RECO_TTL_MS = 30 * 60 * 1000;
 const TRENDING_TTL_MS = 10 * 60 * 1000;
+const DETAILS_TTL_MS = 24 * 60 * 60 * 1000;
+const CRITIC_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-const detailsCache = new Map<string, Title>();
+const detailsCache = new Map<string, { at: number; title: Title }>();
+const criticCache = new Map<string, { at: number; data: CriticScores }>();
 const providersCache = new Map<string, ProvidersByRegion>();
 const airCache = new Map<string, { at: number; data: Record<string, NextEpisode | null> }>();
 const similarCache = new Map<string, { at: number; data: TitleSummary[] }>();
@@ -81,9 +84,15 @@ export async function searchCatalog(
   return { results: seedSearch(query), source: "local" };
 }
 
+function criticFor(imdbId: string | null): CriticScores | null {
+  if (!imdbId) return null;
+  const cached = criticCache.get(imdbId);
+  return cached && Date.now() - cached.at < CRITIC_TTL_MS ? cached.data : null;
+}
+
 export async function fetchTitleDetails(summary: TitleSummary): Promise<Title | null> {
   const cached = detailsCache.get(summary.key);
-  if (cached) return cached;
+  if (cached && Date.now() - cached.at < DETAILS_TTL_MS) return cached.title;
 
   if (summary.tmdbId) {
     try {
@@ -93,8 +102,12 @@ export async function fetchTitleDetails(summary: TitleSummary): Promise<Title | 
         id: String(summary.tmdbId),
       });
       if (status === 200 && body.title) {
-        const title = { ...body.title, critic: null, addedAt: new Date().toISOString() };
-        detailsCache.set(summary.key, title);
+        const title = {
+          ...body.title,
+          critic: criticFor(body.title.imdbId),
+          addedAt: new Date().toISOString(),
+        };
+        detailsCache.set(summary.key, { at: Date.now(), title });
         return title;
       }
     } catch {
@@ -102,24 +115,25 @@ export async function fetchTitleDetails(summary: TitleSummary): Promise<Title | 
     }
   }
   const local = seedTitleByKey(summary.key);
-  if (local) {
-    const title = { ...local, addedAt: new Date().toISOString() };
-    detailsCache.set(summary.key, title);
-    return title;
-  }
+  if (local) return { ...local, addedAt: new Date().toISOString() };
   return null;
 }
 
 export async function fetchCriticScores(imdbId: string): Promise<CriticScores | null> {
+  const cached = criticCache.get(imdbId);
+  if (cached && Date.now() - cached.at < CRITIC_TTL_MS) return cached.data;
+
   try {
     const { status, body } = await callCatalog({ action: "ratings", imdb: imdbId });
     if (status !== 200) return null;
-    return {
+    const scores: CriticScores = {
       imdb: body.imdb ?? null,
       rt: body.rt ?? null,
       metacritic: body.metacritic ?? null,
       fetchedAt: body.fetchedAt ?? new Date().toISOString(),
     };
+    criticCache.set(imdbId, { at: Date.now(), data: scores });
+    return scores;
   } catch {
     return null;
   }
