@@ -57,13 +57,13 @@ src/lib/dates.ts        Local calendar dates (date-only values, never UTC-shifte
 src/lib/api.ts          Browser client for /api/catalog + poster URL + Title helpers
 src/lib/supabase.ts     Client + isSupabaseConfigured (drives local vs cloud mode)
 src/lib/seed.ts         Bundled 25-title starter catalog for offline/keyless mode
-src/hooks/              useAuth (Supabase Google auth), useViewTransition, useCountUp
+src/hooks/              useAuth (Supabase Google auth), useViewTransition, useCountUp, useToast
 src/components/         Poster, Backdrop, ScoreChip (+scoreBand), RatingPicker, WatchCard,
                         LogSheet, DiscoveryRow, DiscoverySheet, WhereToWatch, BarList,
                         ActivityHeatmap, StartChecklist, SignInGate, OnboardingGate, Logo,
-                        ErrorBoundary
+                        ErrorBoundary, ToastProvider
 src/components/ui/      Tailwind/shadcn-style primitives (Button, Input, Select, Textarea, Chip,
-                        Drawer via vaul, Skeleton)
+                        Drawer via vaul, Skeleton, Toast)
 src/views/              One file per tab, plus ReviewView (Year in Review) and DemoPreview
 supabase/migrations/    Versioned SQL (idempotent): tables, RLS, realtime, invite RPCs
 .github/workflows/      ci.yml (checks) and migrate.yml (supabase db push on merge to main)
@@ -81,7 +81,8 @@ Rules that keep this codebase coherent:
   hand-written class names; design tokens live in `@theme` in `src/styles.css`, with the AMOLED
   variant keyed off `document.documentElement.dataset.theme` (see `src/lib/theme.ts`).
 - Sheets/overlays use the vaul `Drawer` primitive (it owns focus trapping and Esc); icon-only
-  buttons need `aria-label`; transient messages use `role="status"`.
+  buttons need `aria-label`; action confirmations use `useToast()` (`ToastProvider` renders the
+  viewport); transient status text uses `role="status"`, form errors stay inline.
 - Chart-heavy surfaces (Stats, Year in Review) are lazily imported. Keep new heavy dependencies out
   of the app shell; if a view needs one, `React.lazy` it in `src/App.tsx` and give it a Suspense
   skeleton.
@@ -121,7 +122,7 @@ Rules that keep this codebase coherent:
 - Lowercase only for inline fragments that continue a value or sentence ("12% non-English",
   "Sam — 3 solo rated · avg 7.1", "4 finished · 2 dropped").
 - Shared helpers live in `src/lib` (e.g. `formatWatchDate` in `src/lib/dates.ts`), UI primitives in
-  `src/components/ui` (Button, Input, Select, Textarea, Chip, Drawer, Skeleton). Never export a
+  `src/components/ui` (Button, Input, Select, Textarea, Chip, Drawer, Skeleton, Toast). Never export a
   utility from a component file; pure analytics belong in `src/lib/analytics.ts` (with tests)
   rather than new one-off modules.
 
