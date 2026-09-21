@@ -101,8 +101,9 @@ Rules that keep this codebase coherent:
   `?invite=` and cleared after a successful join — see `src/lib/invite.ts`) and
   `wesaw.checklist-dismissed` (the first-run checklist). There is no local data mode: watches,
   ratings and lists live in Supabase only.
-- Brand mark: two eyes in the couple colours (amber + coral) looking slightly toward each other
-  on a rounded charcoal tile. The geometry is duplicated in four places that must stay in sync:
+- Brand mark: a coral-and-cream striped popcorn bucket with amber popcorn and two movie tickets
+  on a rounded charcoal tile, in the couple colours (amber + coral). The geometry is duplicated in
+  four places that must stay in sync:
   `public/icon.svg` (favicon), `public/logo.svg` (lockup), `src/components/Logo.tsx` (in-app) and
   `scripts/make-icon.mjs` (PNG rasteriser, `npm run icons`). Change all four together.
 - Path alias `@/` → `src/`. No relative imports inside `src/`.

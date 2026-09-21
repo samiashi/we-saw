@@ -1,14 +1,10 @@
 <div align="center">
 
+<img src="public/icon.svg" alt="We Saw" width="120" height="120" />
+
 # We Saw
 
 A shared movie and TV diary for couples and small groups: log what you watched, rate it out of 10 each, and see your habits turn into stats.
-
-![React](https://img.shields.io/badge/React-19-61dafb?style=flat-square&labelColor=111317)
-![Vite](https://img.shields.io/badge/Vite-8-646cff?style=flat-square&labelColor=111317)
-![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?style=flat-square&labelColor=111317)
-![Supabase](https://img.shields.io/badge/Supabase-ready-3ecf8e?style=flat-square&labelColor=111317)
-![PWA](https://img.shields.io/badge/Installable-PWA-e8b64c?style=flat-square&labelColor=111317)
 
 </div>
 
@@ -64,7 +60,7 @@ VITE_SITE_URL=
 
 Without `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` the app shows a setup screen instead of the log.
 
-`npm run icons` regenerates the PWA icons from the same geometry as `public/icon.svg`, and `public/logo.svg` is the wordmark lockup (dependency-free PNG writer, no image deps). The mark is two eyes in the couple colours — amber and coral looking at each other.
+`npm run icons` regenerates the PWA icons from the same geometry as `public/icon.svg`, and `public/logo.svg` is the wordmark lockup (dependency-free PNG writer, no image deps). The mark is a coral-and-cream striped popcorn bucket topped with amber popcorn and two movie tickets.
 
 ## Checks & automation
 

@@ -15,14 +15,80 @@ export function LogoMark({ size = 40 }: { size?: number }) {
         </linearGradient>
       </defs>
       <rect width="512" height="512" rx="112" fill="url(#wesaw-mark-bg)" />
-      <circle cx="174" cy="264" r="80" fill="#f6efdd" />
-      <circle cx="338" cy="264" r="80" fill="#f6efdd" />
-      <circle cx="184" cy="258" r="37" fill="#e8b64c" />
-      <circle cx="328" cy="258" r="37" fill="#e0685c" />
-      <circle cx="184" cy="258" r="17" fill="#14161c" />
-      <circle cx="328" cy="258" r="17" fill="#14161c" />
-      <circle cx="190" cy="251" r="6" fill="#f6efdd" />
-      <circle cx="334" cy="251" r="6" fill="#f6efdd" />
+
+      <g transform="translate(210 92) rotate(-30)">
+        <rect x="-86" y="-39" width="172" height="78" rx="12" fill="#e0685c" />
+        <rect x="-80" y="-33" width="160" height="66" rx="8" fill="#f6efdd" />
+        <rect x="28" y="-33" width="7" height="66" fill="#e0685c" />
+        <rect x="-58" y="-19" width="64" height="9" rx="4.5" fill="#14161c" />
+        <rect x="-58" y="-2" width="44" height="9" rx="4.5" fill="#14161c" />
+        <rect x="-58" y="15" width="70" height="9" rx="4.5" fill="#14161c" />
+      </g>
+
+      <polygon points="128,250 160,250 200.5,466 182,466" fill="#e0685c" />
+      <polygon points="160,250 192,250 219,466 200.5,466" fill="#f6efdd" />
+      <polygon points="192,250 224,250 237.5,466 219,466" fill="#e0685c" />
+      <polygon points="224,250 256,250 256,466 237.5,466" fill="#f6efdd" />
+      <polygon points="256,250 288,250 274.5,466 256,466" fill="#e0685c" />
+      <polygon points="288,250 320,250 293,466 274.5,466" fill="#f6efdd" />
+      <polygon points="320,250 352,250 311.5,466 293,466" fill="#e0685c" />
+      <polygon points="352,250 384,250 330,466 311.5,466" fill="#f6efdd" />
+
+      <circle cx="126" cy="206" r="28" fill="#e8b64c" />
+      <circle cx="148" cy="230" r="32" fill="#e8b64c" />
+      <circle cx="194" cy="206" r="40" fill="#e8b64c" />
+      <circle cx="246" cy="198" r="46" fill="#e8b64c" />
+      <circle cx="298" cy="206" r="40" fill="#e8b64c" />
+      <circle cx="344" cy="230" r="32" fill="#e8b64c" />
+      <circle cx="368" cy="206" r="28" fill="#e8b64c" />
+      <circle cx="184" cy="260" r="34" fill="#e8b64c" />
+      <circle cx="236" cy="252" r="38" fill="#e8b64c" />
+      <circle cx="288" cy="252" r="38" fill="#e8b64c" />
+      <circle cx="332" cy="262" r="30" fill="#e8b64c" />
+
+      <circle cx="158" cy="218" r="16" fill="#f6efdd" />
+      <circle cx="204" cy="194" r="19" fill="#f6efdd" />
+      <circle cx="250" cy="186" r="20" fill="#f6efdd" />
+      <circle cx="302" cy="194" r="19" fill="#f6efdd" />
+      <circle cx="350" cy="218" r="15" fill="#f6efdd" />
+      <circle cx="174" cy="250" r="14" fill="#f6efdd" />
+      <circle cx="226" cy="242" r="16" fill="#f6efdd" />
+      <circle cx="276" cy="242" r="16" fill="#f6efdd" />
+      <circle cx="324" cy="252" r="13" fill="#f6efdd" />
+
+      <g transform="translate(262 106) rotate(-9)">
+        <rect x="-86" y="-39" width="172" height="78" rx="12" fill="#e0685c" />
+        <rect x="-80" y="-33" width="160" height="66" rx="8" fill="#f6efdd" />
+        <rect x="28" y="-33" width="7" height="66" fill="#e0685c" />
+        <rect x="-58" y="-19" width="64" height="9" rx="4.5" fill="#14161c" />
+        <rect x="-58" y="-2" width="44" height="9" rx="4.5" fill="#14161c" />
+        <rect x="-58" y="15" width="70" height="9" rx="4.5" fill="#14161c" />
+      </g>
+
+      <g fill="#e8b64c">
+        <circle cx="138" cy="138" r="18" />
+        <circle cx="154" cy="130" r="15" />
+        <circle cx="150" cy="148" r="13" />
+        <circle cx="108" cy="174" r="12" />
+        <circle cx="120" cy="170" r="10" />
+        <circle cx="192" cy="104" r="14" />
+        <circle cx="206" cy="100" r="12" />
+        <circle cx="434" cy="174" r="15" />
+        <circle cx="448" cy="170" r="13" />
+        <circle cx="354" cy="448" r="14" />
+        <circle cx="368" cy="444" r="12" />
+        <circle cx="170" cy="470" r="12" />
+        <circle cx="182" cy="466" r="10" />
+      </g>
+      <g fill="#f6efdd">
+        <circle cx="134" cy="132" r="8" />
+        <circle cx="148" cy="124" r="7" />
+        <circle cx="105" cy="170" r="5" />
+        <circle cx="188" cy="99" r="6" />
+        <circle cx="431" cy="169" r="6" />
+        <circle cx="351" cy="443" r="6" />
+        <circle cx="167" cy="465" r="5" />
+      </g>
     </svg>
   );
 }
