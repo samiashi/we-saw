@@ -18,7 +18,7 @@ npm run dev        # http://127.0.0.1:4183 (works with no env at all: local mode
 | `npm run lint`      | ESLint flat config (typescript-eslint, react-hooks, Prettier)     |
 | `npm run format`    | Prettier write (`format:check` is what CI enforces)               |
 | `npm run typecheck` | `tsc -b`                                                          |
-| `npm test`          | Vitest (`src/lib/*.test.ts`)                                      |
+| `npm test`          | Vitest (`tests/**/*.test.ts`)                                     |
 | `npm run icons`     | Regenerates PWA PNGs from the geometry in `scripts/make-icon.mjs` |
 
 Run `npm run format && npm run lint && npm run typecheck && npm test && npm run build` before
@@ -73,7 +73,7 @@ Rules that keep this codebase coherent:
 
 - Views/components never call Supabase directly. All persistence goes through `useStore()`.
 - `src/lib/analytics.ts` stays pure and side-effect free. New analytics = new exported function +
-  a test in `src/lib/*.test.ts`.
+  a test in `tests/`.
 - Date-only values go through `localDateString()` from `src/lib/dates.ts`; `toISOString()` shifts
   the calendar day in non-UTC timezones and is only for timestamps.
 - UI is Tailwind v4 utilities + shadcn-style primitives from `src/components/ui` (Button, Input,
@@ -113,6 +113,9 @@ Rules that keep this codebase coherent:
   (`helpers.ts`, `mappers.ts`, `realtime.ts`) so `store.tsx` stays orchestration.
 - One component per file, file name = component name. PascalCase for `components/` and `views/`,
   camelCase for `lib/` and `hooks/`.
+- **All tests live in `tests/` at the repo root** — never beside the source. Vitest is scoped to
+  `tests/**/*.test.ts` in `vite.config.ts`, and the files import through the `@/` alias
+  (`tests/store-helpers.test.ts` covers `src/lib/store/helpers.ts`).
 - Sentence case everywhere: buttons, headings, labels, chips, captions and empty states all start
   with a capital letter ("Save watch", "On joint watches", "Leave-one-out", "Added by Sam").
 - Lowercase only for inline fragments that continue a value or sentence ("12% non-English",

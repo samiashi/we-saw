@@ -126,6 +126,7 @@ src/lib/theme.ts      Charcoal / AMOLED theme persistence
 src/components/stats/ One small component per analytics section (donut, duel, heatmap, …)
 src/components/ui/    Button, Input, Select, Textarea, Chip, Drawer (vaul), Skeleton
 src/views/            Log, Up Next, History, Stats, Year in Review, Demo, Settings
+tests/                Vitest suites (analytics, dates, store helpers)
 supabase/migrations   Versioned SQL: tables, RLS, realtime, invite RPCs
 supabase/config.toml  Supabase CLI project config
 ```

@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
-import { defineConfig, loadEnv, type Plugin } from "vite";
+import { loadEnv, type Plugin } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
@@ -72,6 +73,10 @@ export default defineConfig(({ mode }) => {
     server: {
       host: "127.0.0.1",
       port: 4183,
+    },
+    test: {
+      environment: "node",
+      include: ["tests/**/*.test.ts"],
     },
     preview: {
       host: "127.0.0.1",
