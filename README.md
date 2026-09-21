@@ -19,7 +19,7 @@ A shared movie and TV diary for couples and small groups: log what you watched, 
 - **Up Next** tab: queue titles, mark what's watching, and drop what you bailed on — logging a movie removes it, logging a season moves it to Watching.
 - **Tonight's pick**: a taste engine builds a genre/actor/director profile per person and ranks your list by the safer minimum score, with a reason line.
 - **Discover**: Popular this week and "Because you loved X" rows, with a _Safe for us_ toggle that ranks by the lower of your two predicted scores.
-- **Where to watch**: streaming, free, rent and buy providers for your country (JustWatch via TMDB) in discover and history sheets, plus **next-episode air dates** on TV shows in Up Next.
+- **Where to watch**: streaming and free providers for your country (JustWatch via TMDB) in discover and history sheets, plus **next-episode air dates** on TV shows in Up Next.
 - Choose who watched: **Together** or **Just me** — rating slots, waiting states and stats all follow the watchers.
 - Rate each watch 1–10 — one score from each of you; nobody can overwrite their partner's score.
 - Critic scores cached per title: IMDb, Rotten Tomatoes and Metacritic (via OMDb) to compare against your own.

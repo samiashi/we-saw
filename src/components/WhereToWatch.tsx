@@ -77,9 +77,6 @@ export function WhereToWatch({
   const groups = [
     ["Stream", entry.flatrate],
     ["Free", entry.free],
-    ["With ads", entry.ads],
-    ["Rent", entry.rent],
-    ["Buy", entry.buy],
   ] as const;
 
   if (!groups.some(([, list]) => list.length)) {
