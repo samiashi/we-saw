@@ -83,7 +83,7 @@ export default defineConfig(({ mode }) => {
     },
     test: {
       environment: "node",
-      include: ["tests/**/*.test.ts"],
+      include: ["tests/**/*.test.{ts,tsx}"],
     },
     preview: {
       host: "127.0.0.1",
