@@ -42,6 +42,13 @@ export function App() {
   const [tab, setTab] = useState<Tab>("log");
   const transition = useViewTransition();
 
+  function selectTab(next: Tab) {
+    transition(() => {
+      setTab(next);
+      window.scrollTo(0, 0);
+    });
+  }
+
   useEffect(() => {
     const prefetch = () => void import("@/views/StatsView");
     if ("requestIdleCallback" in window) {
@@ -77,7 +84,7 @@ export function App() {
           </div>
         ) : null}
 
-        <StartChecklist onNavigate={(next) => transition(() => setTab(next))} />
+        <StartChecklist onNavigate={selectTab} />
 
         {tab === "log" ? <LogView /> : null}
         {tab === "upnext" ? <UpNextView /> : null}
@@ -119,7 +126,7 @@ export function App() {
               "text-muted flex max-w-[110px] flex-1 flex-col items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] transition-colors",
               tab === id && "text-accent bg-accent/8",
             )}
-            onClick={() => transition(() => setTab(id))}
+            onClick={() => selectTab(id)}
           >
             <Icon size={20} />
             <span>{label}</span>
