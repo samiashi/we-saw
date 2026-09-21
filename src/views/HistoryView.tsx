@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Backdrop } from "@/components/Backdrop";
 import { Poster } from "@/components/Poster";
 import { RatingPicker } from "@/components/RatingPicker";
-import { ScoreChip } from "@/components/ScoreChip";
 import { WatchCard } from "@/components/WatchCard";
 import { formatWatchDate } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
@@ -15,13 +14,14 @@ import type { Entry } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 function groupLabel(monthKey: string): string {
+  if (monthKey === "unknown") return "Date unknown";
   const date = new Date(`${monthKey}-01T00:00:00`);
   if (Number.isNaN(date.getTime())) return monthKey;
   return date.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 }
 
 function WatchDetail({ entry, onClose }: { entry: Entry; onClose: () => void }) {
-  const { people, nameFor, canEditScore, setRating, removeWatch } = useStore();
+  const { people, userId, nameFor, canEditScore, setRating, removeWatch } = useStore();
   const toast = useToast();
   const label = seasonLabel(entry);
   const critic = entry.title.critic;
@@ -35,6 +35,15 @@ function WatchDetail({ entry, onClose }: { entry: Entry; onClose: () => void }) 
     const removed = await removeWatch(entry.watch.id);
     onClose();
     if (removed) toast.show(`Deleted ${entry.title.name}${label ? ` ${label}` : ""}`);
+  }
+
+  async function handleRate(personId: string, score: number) {
+    const saved = await setRating(entry.watch.id, personId, score);
+    if (saved) {
+      toast.show(
+        personId === userId ? `Rated ${score}` : `Rated ${score} for ${nameFor(personId)}`,
+      );
+    }
   }
 
   return (
@@ -127,7 +136,7 @@ function WatchDetail({ entry, onClose }: { entry: Entry; onClose: () => void }) 
             </span>
             <RatingPicker
               value={entry.scores[person.id] ?? null}
-              onChange={(score) => void setRating(entry.watch.id, person.id, score)}
+              onChange={(score) => void handleRate(person.id, score)}
               disabled={!canEditScore(person.id, watchers)}
               ariaLabel={`${nameFor(person.id)} rating`}
             />
@@ -151,7 +160,12 @@ function WatchDetail({ entry, onClose }: { entry: Entry; onClose: () => void }) 
 export function HistoryView() {
   const { entries } = useStore();
   const [filter, setFilter] = useState<"all" | "movie" | "tv">("all");
-  const [selected, setSelected] = useState<Entry | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const selected = useMemo(
+    () => entries.find((entry) => entry.watch.id === selectedId) ?? null,
+    [entries, selectedId],
+  );
 
   const filtered = useMemo(
     () => (filter === "all" ? entries : entries.filter((entry) => entry.title.type === filter)),
@@ -161,12 +175,12 @@ export function HistoryView() {
   const groups = useMemo(() => {
     const map = new Map<string, Entry[]>();
     for (const entry of filtered) {
-      const key = entry.watch.watchedOn.slice(0, 7);
+      const key = entry.watch.watchedOn?.slice(0, 7) ?? "unknown";
       const bucket = map.get(key) ?? [];
       bucket.push(entry);
       map.set(key, bucket);
     }
-    return [...map.entries()];
+    return [...map.entries()].sort(([a], [b]) => (a === "unknown" ? 1 : b === "unknown" ? -1 : 0));
   }, [filtered]);
 
   return (
@@ -201,7 +215,11 @@ export function HistoryView() {
             </div>
             <div className="grid auto-rows-fr gap-2">
               {monthEntries.map((entry) => (
-                <WatchCard key={entry.watch.id} entry={entry} onOpen={setSelected} />
+                <WatchCard
+                  key={entry.watch.id}
+                  entry={entry}
+                  onOpen={(next) => setSelectedId(next.watch.id)}
+                />
               ))}
             </div>
           </section>
@@ -210,13 +228,7 @@ export function HistoryView() {
         <p className="text-muted text-[13px]">Nothing here yet.</p>
       )}
 
-      <div className="flex flex-wrap gap-2 pt-1 pb-2">
-        <ScoreChip score={9} label="Loved" />
-        <ScoreChip score={6} label="Fine" />
-        <ScoreChip score={3} label="Nope" />
-      </div>
-
-      {selected ? <WatchDetail entry={selected} onClose={() => setSelected(null)} /> : null}
+      {selected ? <WatchDetail entry={selected} onClose={() => setSelectedId(null)} /> : null}
     </div>
   );
 }
