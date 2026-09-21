@@ -15,13 +15,13 @@ export function DrawerContent({
       <DrawerPrimitive.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
       <DrawerPrimitive.Content
         className={cn(
-          "border-line bg-surface fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[92vh] w-full max-w-[720px] flex-col gap-4 overflow-hidden rounded-t-[20px] border p-4 pb-[calc(20px+env(safe-area-inset-bottom))] focus:outline-none",
+          "border-line bg-surface fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[92vh] w-full max-w-[720px] flex-col gap-4 overflow-hidden rounded-t-[20px] border pt-4 pb-[calc(20px+env(safe-area-inset-bottom))] focus:outline-none",
           className,
         )}
         {...props}
       >
         <div className="bg-surface-2 mx-auto h-1.5 w-12 shrink-0 rounded-full" />
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto overscroll-contain px-4">
           {children}
         </div>
       </DrawerPrimitive.Content>
