@@ -98,7 +98,19 @@ Migrations are idempotent, so applying them over a database that already has som
 
 Once a household exists, creating another one requires a **friend invite** generated in **Settings → Invite a friend**, so the deployment stays invite-only without any per-user API keys. `create_household`, `create_app_invite` and `redeem_invite` are security-definer RPCs, so no service key ever reaches the app.
 
-Row-level security scopes everything to a household: members, watches, ratings, list items and household invites are only visible to their own household (`my_household_id()`); ratings can only be written by their owner and only for a watch they are in (`watchers`); `titles` stays a shared metadata catalog. Watches and list changes stream over Supabase Realtime with household filters.
+Row-level security scopes everything to a household: members, watches, ratings, list items and household invites are only visible to their own household (`my_household_id()`); ratings can only be written by their owner and only for a watch they are in (`watchers`); a trigger keeps `watchers` limited to household members; `titles` stays a shared metadata catalog. Watches and list changes stream over Supabase Realtime with household filters.
+
+## Backups
+
+`.github/workflows/backup.yml` runs every Sunday at 03:00 UTC (or manually via workflow dispatch). It links the project, dumps the `public` schema and its data as two files, and uploads them as a workflow artifact kept for 30 days. It uses the same three repository secrets as the Migrate workflow and skips with a notice when they are missing.
+
+To restore:
+
+1. Download the artifact from the workflow run (Actions → Backup → the run → Artifacts).
+2. Apply `schema.sql` — for example `psql "$DATABASE_URL" -f schema.sql` against a fresh project, or paste it in the Supabase SQL editor.
+3. Apply `data.sql` the same way. The dump covers `public` only; `auth.users` is managed by Supabase, so restore into a project where the same Google accounts exist (or the same project).
+
+The free tier has no point-in-time recovery and projects pause after a week without traffic, so keep a copy of the artifact elsewhere if the data matters.
 
 ## Deploy checklist
 
@@ -126,7 +138,7 @@ src/lib/theme.ts      Charcoal / AMOLED theme persistence
 src/components/stats/ One small component per analytics section (donut, duel, heatmap, …)
 src/components/ui/    Button, Input, Select, Textarea, Chip, Drawer (vaul), Skeleton, Toast
 src/views/            Log, Up Next, History, Stats, Year in Review, Demo, Settings
-tests/                Vitest suites (analytics, dates, store helpers)
+tests/                Vitest suites (analytics, dates, store helpers, retry, components)
 supabase/migrations   Versioned SQL: tables, RLS, realtime, invite RPCs
 supabase/config.toml  Supabase CLI project config
 ```

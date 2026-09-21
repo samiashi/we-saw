@@ -55,6 +55,7 @@ src/lib/store/          helpers.ts (pure state helpers), mappers.ts (cloud rows 
 src/lib/analytics.ts    Pure stats + taste engine (unit tested, no React, no I/O)
 src/lib/dates.ts        Local calendar dates (date-only values, never UTC-shifted)
 src/lib/api.ts          Browser client for /api/catalog + poster URL + Title helpers
+src/lib/retry.ts        Retry/backoff wrapper (`retryWrite`) for Supabase writes
 src/lib/supabase.ts     Client + isSupabaseConfigured (drives local vs cloud mode)
 src/lib/seed.ts         Bundled 25-title starter catalog for offline/keyless mode
 src/hooks/              useAuth (Supabase Google auth), useViewTransition, useCountUp, useToast
@@ -66,7 +67,8 @@ src/components/ui/      Tailwind/shadcn-style primitives (Button, Input, Select,
                         Drawer via vaul, Skeleton, Toast)
 src/views/              One file per tab, plus ReviewView (Year in Review) and DemoPreview
 supabase/migrations/    Versioned SQL (idempotent): tables, RLS, realtime, invite RPCs
-.github/workflows/      ci.yml (checks) and migrate.yml (supabase db push on merge to main)
+.github/workflows/      ci.yml (checks), migrate.yml (supabase db push on merge to main) and
+                        backup.yml (weekly supabase db dump artifact)
 ```
 
 Rules that keep this codebase coherent:
@@ -136,10 +138,11 @@ Multi-tenant by **household**. Every user-data table carries `household_id` and 
   to each other.
 - `titles` — TMDB metadata cached as JSON, keyed `movie:<id>` / `tv:<id>`, shared across households.
 - `watches` — one row per movie or TV season, scoped by `household_id`. `watchers uuid[]` is who
-  watched, `picked_by` is who chose it. A joint watch has every member, a solo watch has one.
-  `watched_on` is nullable: null means "Not sure", and date-based analytics skip those rows while
-  ratings/taste stats still count them. Logging reconciles Up Next: movies flip to `done`, a logged
-  season moves the show to `watching`.
+  watched, `picked_by` is who chose it. A joint watch has every member, a solo watch has one. A
+  `validate_watchers` trigger requires at least one watcher and every watcher to be a member of the
+  watch's household. `watched_on` is nullable: null means "Not sure", and date-based analytics skip
+  those rows while ratings/taste stats still count them. Logging reconciles Up Next: movies flip to
+  `done`, a logged season moves the show to `watching`.
 - `ratings` — `(watch_id, user_id)` primary key, score 1–10. RLS: you can only rate watches you are
   a watcher of, and only as yourself.
 - `list_items` — Up Next entries, unique per `(household_id, title_id)`, status
@@ -156,9 +159,9 @@ Local mode mirrors the same shape in `localStorage` key `wesaw.data.v1` (see `We
 user-data tables must ship `household_id` and household-scoped policies in the same migration.
 
 Migrations are applied to the linked Supabase project (the initial schema, `restrict_anon_execute`,
-`fix_tenant_scoping` and `unknown_watch_dates`). They are append-only — add a new timestamped file
-for every change, never edit one that has been applied. Use `supabase db push` for remote changes
-and keep `supabase/.temp` untracked.
+`fix_tenant_scoping`, `unknown_watch_dates` and `validate_watchers`). They are append-only — add a
+new timestamped file for every change, never edit one that has been applied. Use `supabase db push`
+for remote changes and keep `supabase/.temp` untracked.
 
 ## Analytics and the taste engine
 
@@ -168,7 +171,8 @@ and keep `supabase/.temp` untracked.
 - `buildTasteProfile(entries, personId)` → smoothed genre/actor/director/type affinities
   (prior weight 2 toward the person's mean). `predictScore`, `rankPicks` (safe = min predicted),
   `topGenreOverlap` (reason strings), `predictionAccuracy` (leave-one-out, needs 5+ ratings).
-- Watch time: movie = runtime; TV = per-episode runtime × episode count of the logged season.
+- Watch time: movie = runtime; TV = per-episode runtime × episode count of the logged season, or of
+  every listed season when the whole show is logged (`seasonNumber == null`, the default).
 - Year filters use the **watch date** year (`watchedOn.slice(0, 4)`), not release year. Watches with
   no date ("Not sure", `watchedOn == null`) are excluded from every date-based stat.
 - Habit analytics: `activityHeatmap` (53 weeks, Monday-first), `weekdayCounts`, `watchStreaks`
@@ -213,6 +217,9 @@ and keep `supabase/.temp` untracked.
   `supabase link` + `supabase db push`. Requires repo secrets `SUPABASE_ACCESS_TOKEN`,
   `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF`; without them it skips with a notice. Migrations
   are idempotent, so re-applying over an existing database is safe.
+- Backups (`.github/workflows/backup.yml`): weekly and manual `supabase db dump` of the `public`
+  schema and data, uploaded as a 30-day workflow artifact; same secrets as the migrate workflow.
+  Restore steps live in the README's Backups section.
 - There are 3 accepted `react-refresh/only-export-components` warnings (store + two component
   files). Do not silence them by weakening the rule config.
 - Dependency policy: keep npm packages and workflow actions on their latest releases. Two
@@ -246,15 +253,9 @@ components plus `useStatsData`/`useTitleEnrichment`, store split into `store/hel
 
 Not yet done, in rough priority order:
 
-1. Set the three migration-workflow secrets (`SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`,
-   `SUPABASE_PROJECT_REF`); the repo is pushed and the migrations are already applied to the linked
-   project.
-2. Import history from Trakt / Letterboxd / TV Time so stats start full.
-3. Push nudges ("rate last night's movie", new episodes) on top of the service worker.
-4. Backups: scheduled `supabase db dump` workflow + restore docs (free tier has no PITR; projects
-   pause after a week of inactivity).
-5. Retry/backoff for failed sync writes; integrity constraints on `watchers`.
-6. Episode-level ratings — deferred by design; seasons were the chosen granularity.
+1. Import history from Trakt / Letterboxd / TV Time so stats start full.
+2. Push nudges ("rate last night's movie", new episodes) on top of the service worker.
+3. Episode-level ratings — deferred by design; seasons were the chosen granularity.
 
 ## Verification habits for agents
 
@@ -262,6 +263,8 @@ Not yet done, in rough priority order:
   `Date.now()` without injecting `now`).
 - UI changes: `npm run dev` and click through with no env vars (local mode + seed catalog). The seed
   catalog makes every feature usable without API keys.
+- Component tests run under jsdom via a `// @vitest-environment jsdom` docblock plus Testing Library
+  (`tests/components.test.tsx`); everything else stays in the node environment.
 - Cloud changes: typecheck plus reasoning about RLS — policies live in the migrations; every new
   user-data table needs `household_id` and household-scoped select/insert/update/delete policies
   (`my_household_id()`), and (if realtime matters) a line in the `supabase_realtime` publication
