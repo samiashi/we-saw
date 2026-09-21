@@ -111,6 +111,9 @@ export function LogView() {
 
   function handleSaved(title: Title) {
     setSelected(null);
+    setQuery("");
+    setResults([]);
+    setSource(null);
     setFlash(`Logged ${title.name}`);
     setTimeout(() => setFlash(""), 2500);
   }
