@@ -69,9 +69,9 @@ function ListRow({
   const { setListStatus, removeFromList, nameFor } = useStore();
 
   return (
-    <div className="border-line bg-surface flex items-start gap-3 rounded-2xl border p-3">
+    <div className="border-line bg-surface flex h-full items-start gap-3 rounded-2xl border p-3">
       <Poster title={title} variant="small" />
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 self-stretch">
         <span className="truncate text-[15px] font-semibold">
           {title.name}
           {title.year ? <span className="text-muted font-medium"> · {title.year}</span> : null}
@@ -91,7 +91,7 @@ function ListRow({
           <NextEpisodeChip episode={nextEpisode} />
         </div>
         {predictions ? <PredictionChips predictions={predictions} /> : null}
-        <div className="flex flex-wrap gap-1.5">
+        <div className="mt-auto flex flex-wrap gap-1.5">
           {(["watching", "queued", "dropped"] as const).map((status) => (
             <Chip
               key={status}
@@ -238,7 +238,7 @@ export function UpNextView() {
               <h2 className="text-[17px] font-semibold">{statusLabels[group.status]}</h2>
               <span className="text-muted text-[13px]">{group.rows.length}</span>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="grid auto-rows-fr gap-2">
               {group.rows.map(({ item, title }) => (
                 <ListRow
                   key={item.id}

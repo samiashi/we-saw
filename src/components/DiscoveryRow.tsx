@@ -26,7 +26,7 @@ export function DiscoveryRow({
         <h2 className="text-[17px] font-semibold">{title}</h2>
         {headerRight}
       </div>
-      <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+      <div className="-mx-4 flex items-stretch gap-3 overflow-x-auto px-4 pb-1">
         {items.map((item) => {
           const safe = engineReady ? safeSummaryScore(profiles, item) : null;
           return (
@@ -37,8 +37,8 @@ export function DiscoveryRow({
               onClick={() => onOpen(item)}
             >
               <Poster title={item} className="w-full" />
-              <span className="line-clamp-2 text-xs leading-snug">{item.name}</span>
-              <span className="flex flex-wrap gap-1">
+              <span className="line-clamp-2 min-h-[33px] text-xs leading-snug">{item.name}</span>
+              <span className="mt-auto flex flex-wrap gap-1">
                 {safe != null ? (
                   <span className="border-accent/45 bg-accent/12 inline-flex rounded-full border px-2 py-0.5 text-[11px] text-[#f3d493]">
                     Safe {safe}

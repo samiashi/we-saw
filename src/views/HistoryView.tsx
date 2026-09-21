@@ -196,7 +196,7 @@ export function HistoryView() {
               <h2 className="text-[17px] font-semibold">{groupLabel(key)}</h2>
               <span className="text-muted text-[13px]">{monthEntries.length} watched</span>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="grid auto-rows-fr gap-2">
               {monthEntries.map((entry) => (
                 <WatchCard key={entry.watch.id} entry={entry} onOpen={setSelected} />
               ))}

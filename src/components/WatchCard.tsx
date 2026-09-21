@@ -14,11 +14,11 @@ export function WatchCard({ entry, onOpen }: { entry: Entry; onOpen?: (entry: En
   return (
     <button
       type="button"
-      className="border-line bg-surface hover:border-line/80 flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-colors"
+      className="border-line bg-surface hover:border-line/80 flex h-full w-full items-center gap-3 rounded-2xl border p-3 text-left transition-colors"
       onClick={() => onOpen?.(entry)}
     >
       <Poster title={entry.title} variant="small" />
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 self-stretch">
         <div className="flex items-baseline justify-between gap-2">
           <span className="truncate text-[15px] font-semibold">
             {entry.title.name}
@@ -44,7 +44,7 @@ export function WatchCard({ entry, onOpen }: { entry: Entry; onOpen?: (entry: En
             </span>
           ))}
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="mt-auto flex flex-wrap gap-1.5">
           {watchers.map((watcherId) => (
             <ScoreChip key={watcherId} score={entry.scores[watcherId]} label={nameFor(watcherId)} />
           ))}
