@@ -1,18 +1,8 @@
 import type { ReactNode } from "react";
 import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
-import { STORAGE_KEY } from "@/lib/store/helpers";
 
 function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
   const message = error instanceof Error ? error.message : "Unexpected error";
-
-  function resetLocalData() {
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch (storageError) {
-      console.warn(storageError);
-    }
-    window.location.reload();
-  }
 
   return (
     <div className="flex min-h-screen items-center justify-center p-6">
@@ -34,17 +24,7 @@ function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
           >
             Reload
           </button>
-          <button
-            type="button"
-            className="border-bad/50 text-bad hover:bg-bad/10 h-11 rounded-xl border px-4 text-sm font-semibold transition-colors"
-            onClick={resetLocalData}
-          >
-            Reset local data
-          </button>
         </div>
-        <p className="text-muted text-[13px]">
-          Resetting only clears this device's offline copy; synced data stays in Supabase.
-        </p>
       </div>
     </div>
   );

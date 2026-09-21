@@ -57,7 +57,8 @@ export type TitleSummary = Pick<
 export interface Watch {
   id: string;
   titleKey: string;
-  seasonNumber: number | null;
+  /** TV seasons covered by this watch, sorted; null means the whole show. */
+  seasonNumbers: number[] | null;
   watchedOn: string | null;
   note: string;
   watchers: string[];
@@ -80,7 +81,8 @@ export interface Person {
 
 export interface LogInput {
   title: Title;
-  seasonNumber: number | null;
+  /** TV seasons covered by this watch, sorted; null means the whole show. */
+  seasonNumbers: number[] | null;
   watchedOn: string | null;
   note: string;
   watchers: string[];

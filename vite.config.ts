@@ -12,8 +12,12 @@ function catalogDevApi(env: Record<string, string>): Plugin {
     configureServer(server) {
       server.middlewares.use("/api/catalog", async (req, res) => {
         const url = new URL(req.url ?? "/", "http://localhost");
+        const query: Record<string, string> = {};
+        for (const [name, value] of url.searchParams) {
+          query[name] = query[name] ? `${query[name]},${value}` : value;
+        }
         const result = await handleCatalog({
-          query: Object.fromEntries(url.searchParams),
+          query,
           env: { TMDB_API_KEY: env.TMDB_API_KEY, OMDB_API_KEY: env.OMDB_API_KEY },
           origin: req.headers.origin ?? null,
           referer: req.headers.referer ?? null,
@@ -22,7 +26,7 @@ function catalogDevApi(env: Record<string, string>): Plugin {
         });
         res.statusCode = result.status;
         res.setHeader("content-type", "application/json");
-        res.setHeader("cache-control", "no-store");
+        res.setHeader("cache-control", result.cacheControl);
         res.end(JSON.stringify(result.body));
       });
     },
@@ -56,6 +60,10 @@ export default defineConfig(({ mode }) => {
                 cacheName: "tmdb-images-v3",
                 expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 30 },
               },
+            },
+            {
+              urlPattern: /\/api\/catalog\?[^#]*action=health/i,
+              handler: "NetworkOnly",
             },
             {
               urlPattern: /\/api\/catalog/i,

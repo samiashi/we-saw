@@ -264,13 +264,15 @@ export function watchMinutes(entry: Entry): number | null {
   const { title, watch } = entry;
   if (title.type === "movie") return title.runtimeMinutes;
   if (title.runtimeMinutes == null) return null;
-  if (watch.seasonNumber == null) {
+  if (watch.seasonNumbers == null) {
     const episodes = title.seasons.reduce((sum, season) => sum + season.episodeCount, 0);
     return episodes > 0 ? title.runtimeMinutes * episodes : title.runtimeMinutes;
   }
-  const season = title.seasons.find((item) => item.seasonNumber === watch.seasonNumber);
-  if (!season) return title.runtimeMinutes;
-  return title.runtimeMinutes * season.episodeCount;
+  const wanted = new Set(watch.seasonNumbers);
+  const episodes = title.seasons
+    .filter((season) => wanted.has(season.seasonNumber))
+    .reduce((sum, season) => sum + season.episodeCount, 0);
+  return episodes > 0 ? title.runtimeMinutes * episodes : title.runtimeMinutes;
 }
 
 export function totalMinutes(entries: Entry[]): number {
@@ -469,6 +471,12 @@ export function watchStreaks(
   return { current, longest };
 }
 
+function dayNumber(dateOnly: string): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateOnly);
+  if (!match) return null;
+  return Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) / 86400000;
+}
+
 export interface QueueStats {
   sampleSize: number;
   medianLagDays: number | null;
@@ -482,16 +490,16 @@ export interface QueueStats {
 }
 
 export function queueStats(items: ListItem[], entries: Entry[], now = new Date()): QueueStats {
-  const firstWatch = new Map<string, string>();
+  const watchDays = new Map<string, number[]>();
 
   for (const entry of entries) {
-    const watchedOn = entry.watch.watchedOn;
-    if (!watchedOn) continue;
-    const existing = firstWatch.get(entry.watch.titleKey);
-    if (!existing || watchedOn < existing) {
-      firstWatch.set(entry.watch.titleKey, watchedOn);
-    }
+    const day = entry.watch.watchedOn ? dayNumber(entry.watch.watchedOn) : null;
+    if (day == null) continue;
+    const days = watchDays.get(entry.watch.titleKey) ?? [];
+    days.push(day);
+    watchDays.set(entry.watch.titleKey, days);
   }
+  for (const days of watchDays.values()) days.sort((a, b) => a - b);
 
   const lags: number[] = [];
   let oldestWaitingDays: number | null = null;
@@ -504,11 +512,13 @@ export function queueStats(items: ListItem[], entries: Entry[], now = new Date()
   for (const item of items) {
     const created = new Date(item.createdAt);
     if (Number.isNaN(created.getTime())) continue;
-    const watched = firstWatch.get(item.titleKey);
+    const createdDay = dayNumber(localDateString(created));
+    if (createdDay == null) continue;
+    const days = watchDays.get(item.titleKey);
 
-    if (watched) {
-      const lag = (new Date(`${watched}T00:00:00`).getTime() - created.getTime()) / 86400000;
-      if (lag >= 0) lags.push(lag);
+    if (days) {
+      const watchedDay = days.find((day) => day >= createdDay);
+      if (watchedDay != null) lags.push(watchedDay - createdDay);
     }
 
     if (item.status === "done") {
@@ -733,14 +743,18 @@ export function rewatchStats(entries: Entry[]): RewatchStats {
   const buckets = new Map<string, { name: string; count: number; scores: number[] }>();
 
   for (const entry of entries) {
-    const bucket = buckets.get(entry.watch.titleKey) ?? {
-      name: entry.title.name,
+    const bucketKey = `${entry.watch.titleKey}:${entry.watch.seasonNumbers?.join("+") ?? "all"}`;
+    const bucket = buckets.get(bucketKey) ?? {
+      name:
+        entry.title.type === "tv"
+          ? `${entry.title.name} · ${seasonLabel(entry)}`
+          : entry.title.name,
       count: 0,
       scores: [],
     };
     bucket.count += 1;
     if (entry.combined != null) bucket.scores.push(entry.combined);
-    buckets.set(entry.watch.titleKey, bucket);
+    buckets.set(bucketKey, bucket);
   }
 
   const comfort = [...buckets.values()]
@@ -926,8 +940,14 @@ export function buildInsights(entries: Entry[], people: Person[], now = new Date
 
 export function seasonLabel(entry: Pick<Entry, "watch" | "title">): string {
   if (entry.title.type !== "tv") return "";
-  if (entry.watch.seasonNumber == null) return "All seasons";
-  return `S${entry.watch.seasonNumber}`;
+  const seasons = entry.watch.seasonNumbers;
+  if (!seasons || !seasons.length) return "All seasons";
+  if (seasons.length === 1) return `S${seasons[0]}`;
+  const sorted = [...seasons].sort((a, b) => a - b);
+  const contiguous = sorted.every((value, index) => index === 0 || value === sorted[index - 1] + 1);
+  if (contiguous) return `S${sorted[0]}–S${sorted[sorted.length - 1]}`;
+  const head = sorted.slice(0, 4).map((value) => `S${value}`);
+  return sorted.length > 4 ? `${head.join(", ")}…` : head.join(", ");
 }
 
 export function isJoint(entry: Entry): boolean {
@@ -1134,7 +1154,8 @@ export function topGenreOverlap(
 ): string | null {
   const scored = title.genres
     .map((genre) => ({ genre, signal: smoothedAffinity(profile.genres, genre, profile.mean) }))
-    .filter((row): row is { genre: string; signal: Signal } => row.signal !== null);
+    .filter((row): row is { genre: string; signal: Signal } => row.signal !== null)
+    .filter((row) => row.signal.value > profile.mean);
   if (!scored.length) return null;
   scored.sort((a, b) => b.signal.value - a.signal.value);
   return scored[0].genre;

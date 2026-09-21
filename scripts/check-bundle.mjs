@@ -8,7 +8,7 @@ const CHUNK_LIMIT = 130 * 1024;
 const CSS_LIMIT = 20 * 1024;
 
 const files = readdirSync(dist).filter((file) => file.endsWith(".js") || file.endsWith(".css"));
-const shellPrefixes = ["index-", "react-", "supabase-", "seed-"];
+const shellPrefixes = ["index-", "react-", "supabase-"];
 
 let shell = 0;
 let failed = false;

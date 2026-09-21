@@ -10,9 +10,9 @@ import { Poster } from "@/components/Poster";
 import { RatingPicker } from "@/components/RatingPicker";
 import { ScoreChip } from "@/components/ScoreChip";
 import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -25,10 +25,10 @@ export function LogSheet({
   onClose: () => void;
   onSaved: (title: Title) => void;
 }) {
-  const { people, userId, mode, canEditScore, logWatch, nameFor, entries } = useStore();
+  const { people, userId, canEditScore, logWatch, nameFor, entries } = useStore();
   const [title, setTitle] = useState<Title | null>(null);
   const [loading, setLoading] = useState(true);
-  const [seasonNumber, setSeasonNumber] = useState<number | null>(null);
+  const [selectedSeasons, setSelectedSeasons] = useState<number[] | null>(null);
   const [date, setDate] = useState(localDateString());
   const [dateUnknown, setDateUnknown] = useState(false);
   const [note, setNote] = useState("");
@@ -59,32 +59,27 @@ export function LogSheet({
   const watchOptions: { id: string; label: string; watchers: string[] }[] = [
     { id: "together", label: "Together", watchers: people.map((person) => person.id) },
   ];
-  if (mode === "cloud" && userId) {
+  if (userId) {
     watchOptions.push({
       id: `solo:${userId}`,
       label: `Just ${nameFor(userId)}`,
       watchers: [userId],
     });
-  } else {
-    for (const person of people) {
-      watchOptions.push({
-        id: `solo:${person.id}`,
-        label: `Just ${nameFor(person.id)}`,
-        watchers: [person.id],
-      });
-    }
   }
   const selectedOption = watchOptions.find((option) => option.id === watchMode) ?? watchOptions[0];
   const watchers = selectedOption.watchers;
   const watcherPeople = people.filter((person) => watchers.includes(person.id));
   const editable = watcherPeople.filter((person) => canEditScore(person.id, watchers));
 
-  const season = title?.seasons.find((item) => item.seasonNumber === seasonNumber) ?? null;
   const recentTvWatches = entries.filter((entry) => entry.title.type === "tv").length;
   const episodeCount =
-    seasonNumber == null
-      ? (title?.seasons.reduce((sum, item) => sum + item.episodeCount, 0) ?? 0)
-      : (season?.episodeCount ?? 0);
+    title?.type !== "tv"
+      ? 0
+      : selectedSeasons == null
+        ? title.seasons.reduce((sum, item) => sum + item.episodeCount, 0)
+        : title.seasons
+            .filter((item) => selectedSeasons.includes(item.seasonNumber))
+            .reduce((sum, item) => sum + item.episodeCount, 0);
   const seasonEstimate =
     title?.type === "tv" && title.runtimeMinutes != null && episodeCount > 0
       ? title.runtimeMinutes * episodeCount
@@ -92,22 +87,53 @@ export function LogSheet({
         ? title?.runtimeMinutes
         : null;
   const canSave =
-    !loading && !saving && Boolean(title) && editable.every((person) => scores[person.id] != null);
+    !loading &&
+    !saving &&
+    Boolean(title) &&
+    (dateUnknown || /^\d{4}-\d{2}-\d{2}$/.test(date)) &&
+    (title?.type !== "tv" || selectedSeasons == null || selectedSeasons.length > 0) &&
+    editable.every((person) => scores[person.id] != null);
+
+  const dirty =
+    !loading &&
+    (Object.keys(scores).length > 0 ||
+      note.trim().length > 0 ||
+      pickedBy !== null ||
+      watchMode !== "together" ||
+      selectedSeasons !== null);
+
+  function requestClose() {
+    if (saving || (dirty && !window.confirm("Discard this watch?"))) return;
+    onClose();
+  }
+
+  function toggleSeason(seasonNumber: number) {
+    setSelectedSeasons((current) => {
+      if (current == null) return [seasonNumber];
+      if (current.includes(seasonNumber)) {
+        return current.filter((value) => value !== seasonNumber);
+      }
+      return [...current, seasonNumber].sort((a, b) => a - b);
+    });
+  }
 
   async function save() {
     if (!title || !canSave) return;
     setSaving(true);
-    const saved = await logWatch({
-      title,
-      seasonNumber: title.type === "tv" ? seasonNumber : null,
-      watchedOn: dateUnknown ? null : date || localDateString(),
-      note,
-      watchers,
-      pickedBy,
-      scores: editable.map((person) => ({ userId: person.id, score: scores[person.id] })),
-    });
-    setSaving(false);
-    if (saved) onSaved(title);
+    try {
+      const saved = await logWatch({
+        title,
+        seasonNumbers: title.type === "tv" ? selectedSeasons : null,
+        watchedOn: dateUnknown ? null : date,
+        note,
+        watchers,
+        pickedBy,
+        scores: editable.map((person) => ({ userId: person.id, score: scores[person.id] })),
+      });
+      if (saved) onSaved(title);
+    } finally {
+      setSaving(false);
+    }
   }
 
   const chosen = Object.values(scores);
@@ -117,11 +143,11 @@ export function LogSheet({
   const hasBackdrop = Boolean(title?.backdropPath);
 
   return (
-    <Drawer open onOpenChange={(open) => (!open ? onClose() : undefined)}>
+    <Drawer open onOpenChange={(open) => (!open ? requestClose() : undefined)}>
       <DrawerContent aria-label={`Log ${title?.name ?? "a watch"}`}>
         <header className="flex items-center justify-between">
           <span className="text-muted text-xs tracking-[0.08em] uppercase">Log a watch</span>
-          <Button variant="ghost" size="sm" onClick={onClose}>
+          <Button variant="ghost" size="sm" onClick={requestClose}>
             Close
           </Button>
         </header>
@@ -148,7 +174,12 @@ export function LogSheet({
                   <div className="from-surface absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t to-transparent" />
                 </div>
               ) : null}
-              <div className={cn("flex items-start gap-3.5 px-4", hasBackdrop ? "-mt-20" : "pt-1")}>
+              <div
+                className={cn(
+                  "relative flex items-start gap-3.5 px-4",
+                  hasBackdrop ? "-mt-20" : "pt-1",
+                )}
+              >
                 <Poster
                   title={title}
                   className={cn(hasBackdrop && "ring-surface shadow-lg ring-4")}
@@ -191,41 +222,56 @@ export function LogSheet({
 
             {title.type === "tv" ? (
               <div className="flex flex-col gap-2">
-                <label className="text-muted text-[13px]" htmlFor="season-select">
-                  Season
-                </label>
+                <span className="text-muted text-[13px]">Seasons watched</span>
                 {title.seasons.length ? (
-                  <Select
-                    id="season-select"
-                    value={seasonNumber ?? "all"}
-                    onChange={(event) =>
-                      setSeasonNumber(
-                        event.target.value === "all" ? null : Number(event.target.value),
-                      )
-                    }
-                  >
-                    <option value="all">Whole show</option>
-                    {title.seasons.map((item) => (
-                      <option key={item.seasonNumber} value={item.seasonNumber}>
-                        {item.name} · {item.episodeCount} episodes
-                        {item.year ? ` · ${item.year}` : ""}
-                      </option>
-                    ))}
-                  </Select>
+                  <>
+                    <div className="flex flex-wrap gap-1.5">
+                      <Chip
+                        active={selectedSeasons == null}
+                        aria-pressed={selectedSeasons == null}
+                        onClick={() => setSelectedSeasons(null)}
+                      >
+                        Whole show
+                      </Chip>
+                      {title.seasons.map((item) => {
+                        const active = selectedSeasons?.includes(item.seasonNumber) ?? false;
+                        return (
+                          <Chip
+                            key={item.seasonNumber}
+                            active={active}
+                            aria-pressed={active}
+                            title={`${item.name} · ${item.episodeCount} episodes${
+                              item.year ? ` · ${item.year}` : ""
+                            }`}
+                            onClick={() => toggleSeason(item.seasonNumber)}
+                          >
+                            S{item.seasonNumber}
+                          </Chip>
+                        );
+                      })}
+                    </div>
+                    <p className="text-muted text-[13px]">
+                      {selectedSeasons == null
+                        ? `Whole show · one rating${
+                            seasonEstimate ? ` · about ${formatMinutes(seasonEstimate)}` : ""
+                          }`
+                        : selectedSeasons.length
+                          ? `${selectedSeasons.length} ${
+                              selectedSeasons.length === 1 ? "season" : "seasons"
+                            } · one rating${
+                              seasonEstimate ? ` · about ${formatMinutes(seasonEstimate)}` : ""
+                            }`
+                          : "Pick at least one season, or choose Whole show."}
+                    </p>
+                  </>
                 ) : (
                   <p className="text-muted text-[13px]">
                     No season list for this show — logging the whole show.
                   </p>
                 )}
-                {seasonEstimate ? (
-                  <p className="text-muted text-[13px]">
-                    About {formatMinutes(seasonEstimate)} of watching
-                    {seasonNumber == null && title.seasons.length ? " for the whole show" : ""}
-                  </p>
-                ) : null}
-                {recentTvWatches < 3 ? (
+                {recentTvWatches < 3 && title.seasons.length ? (
                   <p className="text-muted text-[12.5px]">
-                    Each season gets its own rating, or keep the whole show as one.
+                    Tap the seasons you've seen — one rating covers the whole run.
                   </p>
                 ) : null}
               </div>
@@ -253,12 +299,17 @@ export function LogSheet({
                   No date — it won't appear in date-based charts.
                 </p>
               ) : (
-                <Input
-                  id="watch-date"
-                  type="date"
-                  value={date}
-                  onChange={(event) => setDate(event.target.value)}
-                />
+                <>
+                  <Input
+                    id="watch-date"
+                    type="date"
+                    value={date}
+                    onChange={(event) => setDate(event.target.value)}
+                  />
+                  {date && !/^\d{4}-\d{2}-\d{2}$/.test(date) ? (
+                    <p className="text-bad text-[12.5px]">Pick a date or tap Not sure.</p>
+                  ) : null}
+                </>
               )}
             </div>
 

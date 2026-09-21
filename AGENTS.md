@@ -1,6 +1,6 @@
 # AGENTS.md
 
-We Saw — a private, two-person movie and TV diary. Log a movie or TV season, rate it 1–10 each,
+We Saw — a private, two-person movie and TV diary. Log a movie or a set of TV seasons, rate it 1–10 each,
 keep a queue of what's next, and get taste analytics (genres, actors, directors, compatibility,
 predictions). Companion apps in the same style: `../watchdesk`, `../watchlist-cabinet`.
 
@@ -8,8 +8,12 @@ predictions). Companion apps in the same style: `../watchdesk`, `../watchlist-ca
 
 ```bash
 npm install
-npm run dev        # http://127.0.0.1:4183 (works with no env at all: local mode + seed catalog)
+cp .env.example .env.local   # fill in Supabase + catalog keys
+npm run dev        # http://127.0.0.1:4183
 ```
+
+The app is online-only: Supabase (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`) plus at
+least `TMDB_API_KEY` are required. Without Supabase config the app renders `SetupGate`.
 
 | Command             | What it does                                                      |
 | ------------------- | ----------------------------------------------------------------- |
@@ -30,8 +34,8 @@ finishing any change. All five must pass; lint warnings are allowed but errors a
 | ------------------------------- | ---------------------------- | ------------------------------------------------ |
 | `TMDB_API_KEY`                  | `server/catalog.js` (server) | Free key, themoviedb.org Settings → API          |
 | `OMDB_API_KEY`                  | `server/catalog.js` (server) | Free key, omdbapi.com/apikey.aspx                |
-| `VITE_SUPABASE_URL`             | browser                      | Optional; absent ⇒ local-only mode               |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | browser                      | `VITE_SUPABASE_ANON_KEY` also accepted           |
+| `VITE_SUPABASE_URL`             | browser                      | Required; absent ⇒ `SetupGate`                   |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | browser                      | `VITE_SUPABASE_ANON_KEY` also accepted; required |
 | `VITE_SITE_URL`                 | browser                      | OAuth redirect base; defaults to `window.origin` |
 
 Never move `TMDB_API_KEY` / `OMDB_API_KEY` client-side. New third-party calls go through
@@ -48,7 +52,7 @@ vite.config.ts          Mounts the same handler as dev middleware; @/ alias
 src/main.tsx            createRoot + ErrorBoundary + StoreProvider
 src/App.tsx             Auth/member gates, bottom tab bar (Log, Up Next, History, Stats, Settings)
 src/lib/types.ts        All shared types (Title, Watch, Rating, ListItem, Entry, ...)
-src/lib/store.tsx       Store provider: local/cloud modes, realtime wiring, write-through actions,
+src/lib/store.tsx       Store provider: Supabase load, realtime wiring, write-through actions,
                         derived `entries` (helpers in `src/lib/store/`)
 src/lib/store/          helpers.ts (pure state helpers), mappers.ts (cloud rows → types),
                         realtime.ts (incremental change handlers)
@@ -56,16 +60,15 @@ src/lib/analytics.ts    Pure stats + taste engine (unit tested, no React, no I/O
 src/lib/dates.ts        Local calendar dates (date-only values, never UTC-shifted)
 src/lib/api.ts          Browser client for /api/catalog + poster URL + Title helpers
 src/lib/retry.ts        Retry/backoff wrapper (`retryWrite`) for Supabase writes
-src/lib/supabase.ts     Client + isSupabaseConfigured (drives local vs cloud mode)
-src/lib/seed.ts         Bundled 25-title starter catalog for offline/keyless mode
+src/lib/supabase.ts     Client + isSupabaseConfigured (App shows SetupGate when absent)
 src/hooks/              useAuth (Supabase Google auth), useViewTransition, useCountUp, useToast
 src/components/         Poster, Backdrop, ScoreChip (+scoreBand), RatingPicker, WatchCard,
                         LogSheet, DiscoveryRow, DiscoverySheet, WhereToWatch, BarList,
-                        ActivityHeatmap, StartChecklist, SignInGate, OnboardingGate, Logo,
-                        ErrorBoundary, ToastProvider
+                        ActivityHeatmap, StartChecklist, SignInGate, SetupGate, OnboardingGate,
+                        Logo, ErrorBoundary, ToastProvider
 src/components/ui/      Tailwind/shadcn-style primitives (Button, Input, Select, Textarea, Chip,
                         Drawer via vaul, Skeleton, Toast)
-src/views/              One file per tab, plus ReviewView (Year in Review) and DemoPreview
+src/views/              One file per tab, plus ReviewView (Year in Review)
 supabase/migrations/    Versioned SQL (idempotent): tables, RLS, realtime, invite RPCs
 .github/workflows/      ci.yml (checks), migrate.yml (supabase db push on merge to main) and
                         backup.yml (weekly supabase db dump artifact)
@@ -96,8 +99,8 @@ Rules that keep this codebase coherent:
   `wesaw.region` (see `src/lib/region.ts`); both are read on parse, never synced to Supabase.
   Onboarding state uses the same channel: `wesaw.invite` (a pending invite code, captured from
   `?invite=` and cleared after a successful join — see `src/lib/invite.ts`) and
-  `wesaw.checklist-dismissed` (the first-run checklist). The sample-household preview builds
-  fixture data from `src/lib/demo.ts` and is never persisted.
+  `wesaw.checklist-dismissed` (the first-run checklist). There is no local data mode: watches,
+  ratings and lists live in Supabase only.
 - Brand mark: two eyes in the couple colours (amber + coral) looking slightly toward each other
   on a rounded charcoal tile. The geometry is duplicated in four places that must stay in sync:
   `public/icon.svg` (favicon), `public/logo.svg` (lockup), `src/components/Logo.tsx` (in-app) and
@@ -137,12 +140,14 @@ Multi-tenant by **household**. Every user-data table carries `household_id` and 
 - `members` — `auth.users.id` → `display_name` + `household_id`. Only household members are visible
   to each other.
 - `titles` — TMDB metadata cached as JSON, keyed `movie:<id>` / `tv:<id>`, shared across households.
-- `watches` — one row per movie or TV season, scoped by `household_id`. `watchers uuid[]` is who
+- `watches` — one row per movie or per logged TV run, scoped by `household_id`. `seasons int[]`
+  lists the watched seasons (sorted; `null` = whole show), and one rating covers the whole run —
+  a 10-of-14-seasons log is a single watch. `watchers uuid[]` is who
   watched, `picked_by` is who chose it. A joint watch has every member, a solo watch has one. A
   `validate_watchers` trigger requires at least one watcher and every watcher to be a member of the
   watch's household. `watched_on` is nullable: null means "Not sure", and date-based analytics skip
   those rows while ratings/taste stats still count them. Logging reconciles Up Next: movies flip to
-  `done`, a logged season moves the show to `watching`.
+  `done`, a logged TV run moves the show to `watching`.
 - `ratings` — `(watch_id, user_id)` primary key, score 1–10. RLS: you can only rate watches you are
   a watcher of, and only as yourself.
 - `list_items` — Up Next entries, unique per `(household_id, title_id)`, status
@@ -153,8 +158,7 @@ Multi-tenant by **household**. Every user-data table carries `household_id` and 
 - `app_invites` + `create_app_invite()` — friend invites that gate `create_household(...)`; the very
   first household is always allowed so a fresh deployment can bootstrap from the app.
 
-Local mode mirrors the same shape in `localStorage` key `wesaw.data.v1` (see `WeSawData` in
-`src/lib/types.ts`). Any schema change needs: a new timestamped file in `supabase/migrations/`
+Any schema change needs: a new timestamped file in `supabase/migrations/`
 (never edit an applied migration), plus the matching load/map code in `src/lib/store.tsx`. New
 user-data tables must ship `household_id` and household-scoped policies in the same migration.
 
@@ -171,8 +175,8 @@ for remote changes and keep `supabase/.temp` untracked.
 - `buildTasteProfile(entries, personId)` → smoothed genre/actor/director/type affinities
   (prior weight 2 toward the person's mean). `predictScore`, `rankPicks` (safe = min predicted),
   `topGenreOverlap` (reason strings), `predictionAccuracy` (leave-one-out, needs 5+ ratings).
-- Watch time: movie = runtime; TV = per-episode runtime × episode count of the logged season, or of
-  every listed season when the whole show is logged (`seasonNumber == null`, the default).
+- Watch time: movie = runtime; TV = per-episode runtime × episode count of the selected seasons,
+  or of every listed season when the whole show is logged (`seasonNumbers == null`, the default).
 - Year filters use the **watch date** year (`watchedOn.slice(0, 4)`), not release year. Watches with
   no date ("Not sure", `watchedOn == null`) are excluded from every date-based stat.
 - Habit analytics: `activityHeatmap` (53 weeks, Monday-first), `weekdayCounts`, `watchStreaks`
@@ -196,10 +200,10 @@ for remote changes and keep `supabase/.temp` untracked.
   trending with TTLs). Add new catalog reads there rather than fetching from components.
 - Realtime is incremental: rating/watch/list-item events merge straight into state from the event
   payload; only `titles`, `households` and `invite_codes` fall back to a debounced full
-  `loadCloud()`. Own writes are skipped via author columns. Window-focus refetch is throttled to
-  30 s.
-- Recharts is the only heavy UI dependency and must stay behind `React.lazy` (Stats, Review,
-  Demo). Animations are capped at 450 ms; radar/scatter are non-animated so they don't replay on
+  `loadCloud()`. Each subscription uses a unique channel topic so a re-subscribe never reuses a
+  channel that is still leaving. Window-focus refetch is throttled to 30 s.
+- Recharts is the only heavy UI dependency and must stay behind `React.lazy` (Stats, Review).
+  Animations are capped at 450 ms; radar/scatter are non-animated so they don't replay on
   every render.
 - `activityHeatmap`/`predictionAccuracy`/`buildInsights` must stay linear; `predictionAccuracy`
   uses aggregate-subtract leave-one-out (no per-entry profile rebuilds). Keep an eye on the
@@ -240,7 +244,7 @@ Review, AMOLED theme), discovery (trending + "because you loved X" ranked by the
 predicted scores) and where-to-watch/next-episode air dates, plus the habit dashboard (53-week
 heatmap, weekday profile, week streaks, Watch/Hours trend toggle, Queue health with median wait and
 abandon rate, per-person rating habit histograms), onboarding (invite links, first-run
-checklist, sample-household demo, partner-joined notice, in-context logging hints), insight cards,
+checklist, partner-joined notice, in-context logging hints), insight cards,
 genre duel with drill-down, picked-by capture, taste depth (language share, era ratings, runtime
 scatter, rewatches), the shareable Year in Review image, and the performance pass (linear
 leave-one-out accuracy, memoized Stats derivations, capped chart animations, session API caches,
@@ -251,18 +255,26 @@ components plus `useStatsData`/`useTitleEnrichment`, store split into `store/hel
 `store/mappers` + `store/realtime`) and the queue fix (logging a movie now flips its list item to
 `done` instead of deleting it, so finished/abandon-rate stats actually count).
 
+Online-only refactor: local/keyless mode, the bundled seed catalog, the sample-household preview
+and the JSON export/import/clear tools are gone; the app requires Supabase plus catalog keys and
+shows `SetupGate` without them. The service worker stays for shell/image caching only. The audit
+fix pass also covered: unique realtime channel topics (a re-subscribe previously reused a channel
+that was still leaving), load-generation guards and per-user ready state, optimistic `logWatch`
+merges, persisted-value rating rollback, `addToList` result states, air-date caching honesty, the
+missing TMDB TV genre 10765, search debounce races, and the queue/rewatch/affinity analytics fixes.
+
 Not yet done, in rough priority order:
 
 1. Import history from Trakt / Letterboxd / TV Time so stats start full.
 2. Push nudges ("rate last night's movie", new episodes) on top of the service worker.
-3. Episode-level ratings — deferred by design; seasons were the chosen granularity.
+3. Episode-level ratings — deferred by design; a set of seasons was the chosen granularity.
 
 ## Verification habits for agents
 
 - Unit tests first for `analytics.ts` changes; keep them fast and deterministic (no dates from
   `Date.now()` without injecting `now`).
-- UI changes: `npm run dev` and click through with no env vars (local mode + seed catalog). The seed
-  catalog makes every feature usable without API keys.
+- UI changes: `npm run dev` and click through against a dev Supabase project (the app requires
+  Supabase + a TMDB key; without them it shows `SetupGate`).
 - Component tests run under jsdom via a `// @vitest-environment jsdom` docblock plus Testing Library
   (`tests/components.test.tsx`); everything else stays in the node environment.
 - Cloud changes: typecheck plus reasoning about RLS — policies live in the migrations; every new

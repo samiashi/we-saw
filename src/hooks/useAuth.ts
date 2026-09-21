@@ -16,11 +16,14 @@ function readAuthError(): string {
     window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash,
   );
   const errorDescription =
-    searchParams.get("error_description") || hashParams.get("error_description");
+    searchParams.get("error_description") ||
+    hashParams.get("error_description") ||
+    searchParams.get("error") ||
+    hashParams.get("error");
   if (!errorDescription) return "";
 
   window.history.replaceState({}, document.title, window.location.pathname);
-  return errorDescription.replace(/\+/g, " ");
+  return errorDescription.replace(/\+/g, " ").replace(/_/g, " ");
 }
 
 export function useAuth() {
@@ -81,7 +84,7 @@ export function useAuth() {
     const { error } = await supabase.auth.signOut();
     if (error) {
       setAuthMessage("Could not sign out. Try again.");
-      throw error;
+      return;
     }
 
     setSession(null);

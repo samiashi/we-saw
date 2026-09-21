@@ -3,11 +3,9 @@ import { withRating, type ChangePayload } from "@/lib/store/helpers";
 import type { ListItem, ListStatus, Rating, Watch, WeSawData } from "@/lib/types";
 
 export function createRealtimeHandlers({
-  userId,
   setData,
   schedule,
 }: {
-  userId: string;
   setData: Dispatch<SetStateAction<WeSawData>>;
   schedule: () => void;
 }) {
@@ -29,7 +27,6 @@ export function createRealtimeHandlers({
     }
 
     const row = payload.new ?? {};
-    if (row.user_id === userId) return;
     const rating: Rating = {
       watchId: String(row.watch_id),
       userId: String(row.user_id),
@@ -55,11 +52,13 @@ export function createRealtimeHandlers({
     }
 
     const row = payload.new ?? {};
-    if (row.created_by === userId) return;
     const watch: Watch = {
       id: String(row.id),
       titleKey: String(row.title_id),
-      seasonNumber: row.season == null ? null : Number(row.season),
+      seasonNumbers:
+        Array.isArray(row.seasons) && row.seasons.length
+          ? (row.seasons as number[]).map(Number).sort((a, b) => a - b)
+          : null,
       watchedOn: row.watched_on == null ? null : String(row.watched_on),
       note: String(row.note ?? ""),
       watchers: (row.watchers as string[] | null) ?? [],
@@ -88,7 +87,6 @@ export function createRealtimeHandlers({
     }
 
     const row = payload.new ?? {};
-    if (row.added_by === userId && payload.eventType === "INSERT") return;
     const item: ListItem = {
       id: String(row.id),
       titleKey: String(row.title_id),

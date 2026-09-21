@@ -18,11 +18,16 @@ export function mapHousehold(row: Row): { id: string; name: string } {
   return { id: String(row.id), name: String(row.name) };
 }
 
+function mapSeasons(value: unknown): number[] | null {
+  if (!Array.isArray(value) || !value.length) return null;
+  return value.map(Number).sort((a, b) => a - b);
+}
+
 export function mapWatch(row: Row, memberIds: string[]): Watch {
   return {
     id: String(row.id),
     titleKey: String(row.title_id),
-    seasonNumber: row.season == null ? null : Number(row.season),
+    seasonNumbers: mapSeasons(row.seasons),
     watchedOn: row.watched_on == null ? null : String(row.watched_on),
     note: String(row.note ?? ""),
     watchers:

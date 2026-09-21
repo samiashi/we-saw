@@ -45,7 +45,11 @@ export function OnboardingGate() {
     setError("");
     const message = await createHousehold(householdName, name, appCode);
     setBusy(false);
-    if (message) setError(friendlyError(message));
+    if (message) {
+      setError(friendlyError(message));
+      return;
+    }
+    clearInviteCode();
   }
 
   return (

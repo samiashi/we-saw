@@ -13,5 +13,6 @@ export default async function handler(request, response) {
     secFetchSite: request.headers["sec-fetch-site"] ?? null,
   });
   response.setHeader("Cache-Control", result.cacheControl);
+  response.setHeader("Vary", "Origin, Referer, Sec-Fetch-Site");
   response.status(result.status).json(result.body);
 }

@@ -15,7 +15,7 @@ interface ChecklistItem {
 }
 
 export function StartChecklist({ onNavigate }: { onNavigate: (tab: "log" | "settings") => void }) {
-  const { mode, people, entries } = useStore();
+  const { people, entries } = useStore();
   const [dismissed, setDismissed] = useState(() => {
     try {
       return localStorage.getItem(DISMISS_KEY) === "1";
@@ -26,14 +26,7 @@ export function StartChecklist({ onNavigate }: { onNavigate: (tab: "log" | "sett
 
   const items: ChecklistItem[] = [
     { id: "log", label: "Log your first watch", done: entries.length > 0, tab: "log" },
-    mode === "cloud"
-      ? { id: "invite", label: "Invite your partner", done: people.length >= 2, tab: "settings" }
-      : {
-          id: "names",
-          label: "Name you two",
-          done: people.some((person) => person.name !== "You" && person.name !== "Partner"),
-          tab: "settings",
-        },
+    { id: "invite", label: "Invite your partner", done: people.length >= 2, tab: "settings" },
     { id: "region", label: "Pick where you watch from", done: hasRegionChoice(), tab: "settings" },
   ];
   const pending = items.filter((item) => !item.done);

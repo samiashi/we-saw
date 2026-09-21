@@ -26,14 +26,13 @@ export function LogView() {
   const toast = useToast();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<TitleSummary[]>([]);
-  const [source, setSource] = useState<"tmdb" | "local" | null>(null);
-  const [searching, setSearching] = useState(false);
+  const [searchFailed, setSearchFailed] = useState(false);
+  const [settledQuery, setSettledQuery] = useState("");
   const [selected, setSelected] = useState<TitleSummary | null>(null);
   const [trending, setTrending] = useState<TitleSummary[] | null>(null);
   const [similar, setSimilar] = useState<{ seed: Title; items: TitleSummary[] } | null>(null);
   const [discovery, setDiscovery] = useState<TitleSummary | null>(null);
   const [sort, setSort] = useState<"popular" | "taste">("popular");
-  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestId = useRef(0);
 
   const profiles = useMemo(
@@ -54,6 +53,7 @@ export function LogView() {
     return loved[0]?.title ?? null;
   }, [entries]);
   const showResults = query.trim().length >= 2;
+  const searching = showResults && settledQuery !== query.trim();
 
   function rank(items: TitleSummary[]): TitleSummary[] {
     if (sort !== "taste" || !engineReady) return items;
@@ -63,27 +63,22 @@ export function LogView() {
   }
 
   useEffect(() => {
-    if (debounce.current) clearTimeout(debounce.current);
     const trimmed = query.trim();
+    const id = (requestId.current += 1);
+    if (trimmed.length < 2) return;
 
-    if (trimmed.length < 2) {
-      requestId.current += 1;
-      return;
-    }
-
-    debounce.current = setTimeout(async () => {
-      const id = requestId.current + 1;
-      requestId.current = id;
-      setSearching(true);
+    let active = true;
+    const timer = setTimeout(async () => {
       const response = await searchCatalog(trimmed);
-      if (requestId.current !== id) return;
-      setResults(response.results);
-      setSource(response.source);
-      setSearching(false);
+      if (!active || requestId.current !== id) return;
+      setResults(response ?? []);
+      setSearchFailed(response === null);
+      setSettledQuery(trimmed);
     }, 350);
 
     return () => {
-      if (debounce.current) clearTimeout(debounce.current);
+      active = false;
+      clearTimeout(timer);
     };
   }, [query]);
 
@@ -113,15 +108,18 @@ export function LogView() {
     setSelected(null);
     setQuery("");
     setResults([]);
-    setSource(null);
     toast.show(`Logged ${title.name}`);
   }
 
   async function quickAdd(summary: TitleSummary) {
     const details = (await fetchTitleDetails(summary)) ?? fallbackTitle(summary);
-    const added = await addToList(details);
+    const result = await addToList(details);
     toast.show(
-      added ? `Added ${details.name} to Up Next` : `${details.name} is already on the list`,
+      result === "added"
+        ? `Added ${details.name} to Up Next`
+        : result === "exists"
+          ? `${details.name} is already on the list`
+          : `Could not add ${details.name} to Up Next`,
     );
   }
 
@@ -149,12 +147,6 @@ export function LogView() {
           onChange={(event) => setQuery(event.target.value)}
         />
       </div>
-
-      {showResults && source === "local" && results.length ? (
-        <p className="text-muted text-[13px]">
-          Showing the offline starter catalog — add a TMDB key for full search.
-        </p>
-      ) : null}
 
       {showResults && searching ? <p className="text-muted text-[13px]">Searching…</p> : null}
 
@@ -196,7 +188,11 @@ export function LogView() {
       ) : null}
 
       {showResults && !searching && !results.length ? (
-        <p className="text-muted text-[13px]">No matches. Try another spelling.</p>
+        <p className="text-muted text-[13px]">
+          {searchFailed
+            ? "Search is unavailable right now. Try again."
+            : "No matches. Try another spelling."}
+        </p>
       ) : null}
 
       {!showResults ? (

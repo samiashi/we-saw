@@ -1,3 +1,5 @@
+import { flushSync } from "react-dom";
+
 type StartViewTransition = (update: () => void) => void;
 
 export function useViewTransition(): StartViewTransition {
@@ -7,6 +9,8 @@ export function useViewTransition(): StartViewTransition {
       update();
       return;
     }
-    document.startViewTransition(update);
+    document.startViewTransition(() => {
+      flushSync(update);
+    });
   };
 }

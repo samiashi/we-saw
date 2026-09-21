@@ -1,4 +1,3 @@
-import { seedSearch, seedTitleByKey } from "@/lib/seed";
 import type { CriticScores, MediaType, NextEpisode, Title, TitleSummary } from "@/lib/types";
 
 export interface CatalogHealth {
@@ -27,13 +26,31 @@ const RECO_TTL_MS = 30 * 60 * 1000;
 const TRENDING_TTL_MS = 10 * 60 * 1000;
 const DETAILS_TTL_MS = 24 * 60 * 60 * 1000;
 const CRITIC_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const PROVIDERS_TTL_MS = 60 * 60 * 1000;
+const MAX_CACHE_ENTRIES = 300;
 
-const detailsCache = new Map<string, { at: number; title: Title }>();
+const detailsCache = new Map<string, { at: number; data: Title }>();
 const criticCache = new Map<string, { at: number; data: CriticScores }>();
-const providersCache = new Map<string, ProvidersByRegion>();
+const providersCache = new Map<string, { at: number; data: ProvidersByRegion }>();
 const airCache = new Map<string, { at: number; data: Record<string, NextEpisode | null> }>();
 const similarCache = new Map<string, { at: number; data: TitleSummary[] }>();
 let trendingCache: { at: number; data: TitleSummary[] } | null = null;
+
+function cacheGet<T>(cache: Map<string, { at: number; data: T }>, key: string, ttl: number) {
+  const cached = cache.get(key);
+  if (!cached || Date.now() - cached.at >= ttl) return null;
+  return cached.data;
+}
+
+function cacheSet<T>(cache: Map<string, { at: number; data: T }>, key: string, data: T) {
+  cache.delete(key);
+  cache.set(key, { at: Date.now(), data });
+  while (cache.size > MAX_CACHE_ENTRIES) {
+    const oldest = cache.keys().next().value;
+    if (oldest === undefined) break;
+    cache.delete(oldest);
+  }
+}
 
 interface CatalogResponse {
   error?: string;
@@ -50,6 +67,7 @@ interface CatalogResponse {
   fetchedAt?: string;
   regions?: ProvidersByRegion;
   air?: Record<string, NextEpisode | null>;
+  failed?: string[];
 }
 
 async function callCatalog(
@@ -72,56 +90,50 @@ export async function catalogHealth(): Promise<CatalogHealth | null> {
   }
 }
 
-export async function searchCatalog(
-  query: string,
-): Promise<{ results: TitleSummary[]; source: "tmdb" | "local" }> {
+export async function searchCatalog(query: string): Promise<TitleSummary[] | null> {
   try {
     const { status, body } = await callCatalog({ action: "search", q: query });
-    if (status === 200 && body.results) return { results: body.results, source: "tmdb" };
+    if (status === 200 && body.results) return body.results;
   } catch {
-    // fall through to the bundled catalog
+    // treat as unavailable below
   }
-  return { results: seedSearch(query), source: "local" };
+  return null;
 }
 
 function criticFor(imdbId: string | null): CriticScores | null {
   if (!imdbId) return null;
-  const cached = criticCache.get(imdbId);
-  return cached && Date.now() - cached.at < CRITIC_TTL_MS ? cached.data : null;
+  return cacheGet(criticCache, imdbId, CRITIC_TTL_MS);
 }
 
 export async function fetchTitleDetails(summary: TitleSummary): Promise<Title | null> {
-  const cached = detailsCache.get(summary.key);
-  if (cached && Date.now() - cached.at < DETAILS_TTL_MS) return cached.title;
+  const cached = cacheGet(detailsCache, summary.key, DETAILS_TTL_MS);
+  if (cached) return cached;
+  if (!summary.tmdbId) return null;
 
-  if (summary.tmdbId) {
-    try {
-      const { status, body } = await callCatalog({
-        action: "title",
-        type: summary.type,
-        id: String(summary.tmdbId),
-      });
-      if (status === 200 && body.title) {
-        const title = {
-          ...body.title,
-          critic: criticFor(body.title.imdbId),
-          addedAt: new Date().toISOString(),
-        };
-        detailsCache.set(summary.key, { at: Date.now(), title });
-        return title;
-      }
-    } catch {
-      // fall through to local data
+  try {
+    const { status, body } = await callCatalog({
+      action: "title",
+      type: summary.type,
+      id: String(summary.tmdbId),
+    });
+    if (status === 200 && body.title) {
+      const title = {
+        ...body.title,
+        critic: criticFor(body.title.imdbId),
+        addedAt: new Date().toISOString(),
+      };
+      cacheSet(detailsCache, summary.key, title);
+      return title;
     }
+  } catch {
+    // fall through to null
   }
-  const local = seedTitleByKey(summary.key);
-  if (local) return { ...local, addedAt: new Date().toISOString() };
   return null;
 }
 
 export async function fetchCriticScores(imdbId: string): Promise<CriticScores | null> {
-  const cached = criticCache.get(imdbId);
-  if (cached && Date.now() - cached.at < CRITIC_TTL_MS) return cached.data;
+  const cached = cacheGet(criticCache, imdbId, CRITIC_TTL_MS);
+  if (cached) return cached;
 
   try {
     const { status, body } = await callCatalog({ action: "ratings", imdb: imdbId });
@@ -132,7 +144,7 @@ export async function fetchCriticScores(imdbId: string): Promise<CriticScores | 
       metacritic: body.metacritic ?? null,
       fetchedAt: body.fetchedAt ?? new Date().toISOString(),
     };
-    criticCache.set(imdbId, { at: Date.now(), data: scores });
+    cacheSet(criticCache, imdbId, scores);
     return scores;
   } catch {
     return null;
@@ -164,13 +176,13 @@ export async function fetchProviders(
   tmdbId: number,
 ): Promise<ProvidersByRegion | null> {
   const key = `${type}:${tmdbId}`;
-  const cached = providersCache.get(key);
+  const cached = cacheGet(providersCache, key, PROVIDERS_TTL_MS);
   if (cached) return cached;
 
   try {
     const { status, body } = await callCatalog({ action: "providers", type, id: String(tmdbId) });
     if (status !== 200 || !body.regions) return null;
-    providersCache.set(key, body.regions);
+    cacheSet(providersCache, key, body.regions);
     return body.regions;
   } catch {
     return null;
@@ -180,14 +192,18 @@ export async function fetchProviders(
 export async function fetchAirdates(keys: string[]): Promise<Record<string, NextEpisode | null>> {
   if (!keys.length) return {};
   const cacheKey = [...keys].sort().join(",");
-  const cached = airCache.get(cacheKey);
-  if (cached && Date.now() - cached.at < AIR_TTL_MS) return cached.data;
+  const cached = cacheGet(airCache, cacheKey, AIR_TTL_MS);
+  if (cached) return cached;
 
   try {
     const { status, body } = await callCatalog({ action: "air", keys: cacheKey });
     if (status !== 200 || !body.air) return {};
-    airCache.set(cacheKey, { at: Date.now(), data: body.air });
-    return body.air;
+    const failed = new Set(body.failed ?? []);
+    const data = Object.fromEntries(Object.entries(body.air).filter(([key]) => !failed.has(key)));
+    if (!failed.size && Object.keys(data).length === keys.length) {
+      cacheSet(airCache, cacheKey, data);
+    }
+    return data;
   } catch {
     return {};
   }
@@ -208,13 +224,13 @@ export async function fetchTrending(): Promise<TitleSummary[]> {
 
 export async function fetchSimilar(type: MediaType, tmdbId: number): Promise<TitleSummary[]> {
   const key = `${type}:${tmdbId}`;
-  const cached = similarCache.get(key);
-  if (cached && Date.now() - cached.at < RECO_TTL_MS) return cached.data;
+  const cached = cacheGet(similarCache, key, RECO_TTL_MS);
+  if (cached) return cached;
 
   try {
     const { status, body } = await callCatalog({ action: "similar", type, id: String(tmdbId) });
     if (status !== 200 || !body.results) return [];
-    similarCache.set(key, { at: Date.now(), data: body.results });
+    cacheSet(similarCache, key, body.results);
     return body.results;
   } catch {
     return [];

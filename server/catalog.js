@@ -2,7 +2,7 @@ const TMDB_BASE = "https://api.themoviedb.org/3";
 const OMDB_BASE = "https://www.omdbapi.com/";
 const REQUEST_TIMEOUT_MS = 8000;
 const PUBLIC_CACHE = "public, s-maxage=3600, stale-while-revalidate=86400";
-const MAX_AIR_KEYS = 15;
+const MAX_AIR_KEYS = 40;
 
 const GENRE_NAMES = {
   12: "Adventure",
@@ -27,6 +27,7 @@ const GENRE_NAMES = {
   10762: "Kids",
   10763: "News",
   10764: "Reality",
+  10765: "Sci-Fi & Fantasy",
   10766: "Soap",
   10767: "Talk",
   10768: "War & Politics",
@@ -51,7 +52,7 @@ function isSameOriginRequest({ origin, referer, host, secFetchSite }) {
 
   if (origin) return sameHost(origin);
   if (referer) return sameHost(referer);
-  return secFetchSite === "same-origin" || secFetchSite === "same-site";
+  return secFetchSite === "same-origin";
 }
 
 function fetchWithTimeout(url, timeoutMs = REQUEST_TIMEOUT_MS) {
@@ -251,26 +252,34 @@ async function providers(query, env) {
 
 async function air(query, env) {
   if (!env.TMDB_API_KEY) return json(503, { error: "missing_key", missing: "TMDB_API_KEY" });
-  const keys = String(query.keys ?? "")
+  const requested = String(query.keys ?? "")
     .split(",")
     .map((key) => key.trim())
-    .filter(Boolean)
-    .slice(0, MAX_AIR_KEYS);
+    .filter(Boolean);
+  const keys = requested.slice(0, MAX_AIR_KEYS);
+  const failed = [];
 
   const entries = await Promise.all(
     keys.map(async (key) => {
       const [type, id] = key.split(":");
-      if (type !== "tv" || !Number.isFinite(Number(id))) return [key, null];
+      const movieId = Number(id);
+      if (type !== "tv" || !Number.isInteger(movieId) || movieId <= 0) return [key, null];
       try {
-        const data = await tmdbFetch(`/tv/${id}`, env.TMDB_API_KEY);
+        const data = await tmdbFetch(`/tv/${movieId}`, env.TMDB_API_KEY);
         return [key, mapNextEpisode(data.next_episode_to_air)];
       } catch {
+        failed.push(key);
         return [key, null];
       }
     }),
   );
 
-  return json(200, { air: Object.fromEntries(entries) }, PUBLIC_CACHE);
+  const complete = !failed.length && requested.length <= MAX_AIR_KEYS;
+  return json(
+    200,
+    { air: Object.fromEntries(entries), failed, omitted: requested.slice(MAX_AIR_KEYS) },
+    complete ? PUBLIC_CACHE : "no-store",
+  );
 }
 
 async function ratings(query, env) {

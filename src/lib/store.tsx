@@ -12,13 +12,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { buildEntries } from "@/lib/analytics";
 import { retryWrite } from "@/lib/retry";
 import {
-  defaultPeople,
   emptyData,
   errorText,
   generateInviteCode,
-  loadLocal,
   reconcileAfterLog,
-  STORAGE_KEY,
   withRating,
 } from "@/lib/store/helpers";
 import {
@@ -31,7 +28,7 @@ import {
   mapWatch,
 } from "@/lib/store/mappers";
 import { createRealtimeHandlers } from "@/lib/store/realtime";
-import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import type {
   AppInvite,
   Entry,
@@ -47,9 +44,10 @@ import type {
   WeSawData,
 } from "@/lib/types";
 
+export type AddToListResult = "added" | "exists" | "failed";
+
 export interface WeSawStore {
   ready: boolean;
-  mode: "local" | "cloud";
   people: Person[];
   userId: string | null;
   household: Household | null;
@@ -62,8 +60,8 @@ export interface WeSawStore {
   titles: Record<string, Title>;
   entries: Entry[];
   listItems: ListItem[];
-  addToList: (title: Title) => Promise<boolean>;
-  setListStatus: (itemId: string, status: ListStatus) => Promise<void>;
+  addToList: (title: Title) => Promise<AddToListResult>;
+  setListStatus: (itemId: string, status: ListStatus) => Promise<boolean>;
   removeFromList: (itemId: string) => Promise<boolean>;
   nameFor: (userId: string) => string;
   canEditScore: (userId: string, watchers: string[]) => boolean;
@@ -86,9 +84,6 @@ export interface WeSawStore {
     inviteCode: string,
   ) => Promise<string | null>;
   refresh: () => Promise<void>;
-  exportData: () => string;
-  importData: (json: string) => boolean;
-  clearAll: () => void;
   auth: ReturnType<typeof useAuth>;
 }
 
@@ -96,26 +91,35 @@ const StoreContext = createContext<WeSawStore | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
-  const mode: "local" | "cloud" = isSupabaseConfigured ? "cloud" : "local";
   const userId = auth.session?.user.id ?? null;
 
-  const [data, setData] = useState<WeSawData>(() => (mode === "local" ? loadLocal() : emptyData()));
+  const [data, setData] = useState<WeSawData>(emptyData);
   const [invites, setInvites] = useState<InviteCode[]>([]);
   const [appInvites, setAppInvites] = useState<AppInvite[]>([]);
   const [household, setHousehold] = useState<Household | null>(null);
   const householdId = household?.id ?? null;
-  const [ready, setReady] = useState(mode === "local");
+  const [loadedUserId, setLoadedUserId] = useState<string | null>(null);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
-  const [partnerJoined, setPartnerJoined] = useState(false);
+  const [partnerJoinedFor, setPartnerJoinedFor] = useState<string | null>(null);
   const memberCount = useRef(0);
   const [syncError, setSyncError] = useState("");
   const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastLoadAt = useRef(0);
+  const loadId = useRef(0);
+  const channelSeq = useRef(0);
+  const dataRef = useRef(data);
+  const userIdRef = useRef(userId);
   const ratingWrites = useRef(new Map<string, Promise<unknown>>());
+  const persistedRatings = useRef(new Map<string, Rating | null>());
+  const listWrites = useRef(new Set<string>());
+
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
 
   const loadCloud = useCallback(async () => {
     if (!supabase || !userId) return;
-    lastLoadAt.current = Date.now();
+    const id = ++loadId.current;
     const [
       membersResult,
       titlesResult,
@@ -134,7 +138,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       supabase
         .from("watches")
         .select(
-          "id, title_id, season, watched_on, note, watchers, picked_by, created_by, created_at",
+          "id, title_id, seasons, watched_on, note, watchers, picked_by, created_by, created_at",
         ),
       supabase.from("ratings").select("watch_id, user_id, score, updated_at"),
       supabase
@@ -144,6 +148,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       supabase.from("households").select("id, name"),
       supabase.from("app_invites").select("code, invited_by, created_at, consumed_by, consumed_at"),
     ]);
+
+    if (id !== loadId.current || userIdRef.current !== userId) return;
 
     for (const result of [
       membersResult,
@@ -155,7 +161,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     ]) {
       if (result.error) {
         setSyncError(errorText(result.error));
-        setReady(true);
         return;
       }
     }
@@ -164,33 +169,47 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const memberIds = members.map((member) => member.user_id);
     const previousCount = memberCount.current;
     memberCount.current = members.length;
-    if (previousCount > 0 && members.length > previousCount) setPartnerJoined(true);
+    if (previousCount > 0 && members.length > previousCount) setPartnerJoinedFor(userId);
     const householdRow = householdResult.data?.[0] ?? null;
+    const ratings = (ratingsResult.data ?? []).map(mapRating);
+    persistedRatings.current = new Map(
+      ratings
+        .filter((rating) => rating.userId === userId)
+        .map((rating) => [`${rating.watchId}:${rating.userId}`, rating]),
+    );
     setHousehold(householdRow ? mapHousehold(householdRow) : null);
     setNeedsOnboarding(!members.some((member) => member.user_id === userId));
-    setAppInvites(appInvitesResult.error ? [] : (appInvitesResult.data ?? []).map(mapAppInvite));
-    setInvites(invitesResult.error ? [] : (invitesResult.data ?? []).map(mapInvite));
+    if (!appInvitesResult.error) setAppInvites((appInvitesResult.data ?? []).map(mapAppInvite));
+    if (!invitesResult.error) setInvites((invitesResult.data ?? []).map(mapInvite));
     setData({
       people: members.map(mapPerson),
       titles: Object.fromEntries(
         (titlesResult.data ?? []).map((row) => [row.id, row.payload as Title]),
       ),
       watches: (watchesResult.data ?? []).map((row) => mapWatch(row, memberIds)),
-      ratings: (ratingsResult.data ?? []).map(mapRating),
+      ratings,
       listItems: (listResult.data ?? []).map(mapListItem),
     });
+    lastLoadAt.current = Date.now();
     setSyncError("");
-    setReady(true);
+    setLoadedUserId(userId);
   }, [userId]);
 
   useEffect(() => {
-    if (mode !== "cloud" || !userId) return;
+    userIdRef.current = userId;
+    loadId.current += 1;
+    memberCount.current = 0;
+    persistedRatings.current = new Map();
+    ratingWrites.current = new Map();
+    listWrites.current = new Set();
+
+    if (!userId) return;
     const timer = setTimeout(() => void loadCloud(), 0);
     return () => clearTimeout(timer);
-  }, [mode, userId, loadCloud]);
+  }, [userId, loadCloud]);
 
   useEffect(() => {
-    if (mode !== "cloud" || !supabase || !userId) return;
+    if (!supabase || !userId) return;
     const client = supabase;
 
     const schedule = () => {
@@ -199,13 +218,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
 
     const { handleRating, handleWatch, handleListItem } = createRealtimeHandlers({
-      userId,
       setData,
       schedule,
     });
 
+    channelSeq.current += 1;
     const channel = client
-      .channel("wesaw-changes")
+      .channel(`wesaw-changes-${channelSeq.current}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "titles" }, schedule)
       .on("postgres_changes", { event: "*", schema: "public", table: "ratings" }, handleRating);
 
@@ -240,26 +259,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => {
       if (refetchTimer.current) clearTimeout(refetchTimer.current);
       window.removeEventListener("focus", onFocus);
-      void client.removeChannel(channel);
+      void client.removeChannel(channel).catch(() => undefined);
     };
-  }, [mode, userId, householdId, loadCloud]);
+  }, [userId, householdId, loadCloud]);
 
-  useEffect(() => {
-    if (mode !== "local") return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    } catch {
-      console.warn("Could not save to this device's storage.");
-    }
-  }, [mode, data]);
-
-  const people = useMemo(() => {
-    if (mode === "local") return data.people;
-    return [...data.people].sort(
-      (a, b) =>
-        (a.id === userId ? -1 : 0) - (b.id === userId ? -1 : 0) || a.name.localeCompare(b.name),
-    );
-  }, [mode, data.people, userId]);
+  const people = useMemo(
+    () =>
+      [...data.people].sort(
+        (a, b) =>
+          (a.id === userId ? -1 : 0) - (b.id === userId ? -1 : 0) || a.name.localeCompare(b.name),
+      ),
+    [data.people, userId],
+  );
 
   const entries = useMemo(
     () => buildEntries(Object.values(data.titles), data.watches, data.ratings),
@@ -267,34 +278,38 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   async function patchTitle(key: string, patch: Partial<Title>) {
-    const existing = data.titles[key];
-    if (!existing) return;
+    const existing = dataRef.current.titles[key];
+    if (!existing || !supabase) return;
+    const client = supabase;
     const next = { ...existing, ...patch };
 
-    if (mode === "local" || !supabase) {
-      setData((current) => ({ ...current, titles: { ...current.titles, [key]: next } }));
-      return;
-    }
-
-    const client = supabase;
-    const { error } = await retryWrite(() =>
-      client
-        .from("titles")
-        .upsert({ id: key, payload: next, updated_at: new Date().toISOString() }),
-    );
-    if (error) {
+    try {
+      const { error } = await retryWrite(() =>
+        client
+          .from("titles")
+          .upsert({ id: key, payload: next, updated_at: new Date().toISOString() }),
+      );
+      if (error) {
+        setSyncError(errorText(error));
+        return;
+      }
+      setData((current) => ({
+        ...current,
+        titles: { ...current.titles, [key]: { ...(current.titles[key] ?? existing), ...patch } },
+      }));
+    } catch (error) {
       setSyncError(errorText(error));
-      return;
     }
-    setData((current) => ({ ...current, titles: { ...current.titles, [key]: next } }));
   }
 
   async function logWatch(input: LogInput) {
+    if (!supabase || !userId) return false;
+    const client = supabase;
     const now = new Date().toISOString();
     const watch: Watch = {
       id: crypto.randomUUID(),
       titleKey: input.title.key,
-      seasonNumber: input.seasonNumber,
+      seasonNumbers: input.seasonNumbers,
       watchedOn: input.watchedOn,
       note: input.note.trim(),
       watchers: input.watchers,
@@ -302,117 +317,129 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       createdBy: userId,
       createdAt: now,
     };
-    const nextRatings: Rating[] = input.scores.map((score) => ({
-      watchId: watch.id,
-      userId: score.userId,
-      score: score.score,
-      updatedAt: now,
-    }));
+    const ownRatings: Rating[] = input.scores
+      .filter((score) => score.userId === userId)
+      .map((score) => ({
+        watchId: watch.id,
+        userId: score.userId,
+        score: score.score,
+        updatedAt: now,
+      }));
 
-    if (mode === "local" || !supabase) {
+    try {
+      const titleWrite = await retryWrite(() =>
+        client
+          .from("titles")
+          .upsert({ id: input.title.key, payload: input.title, updated_at: now }),
+      );
+      if (titleWrite.error) {
+        setSyncError(errorText(titleWrite.error));
+        return false;
+      }
+
+      const watchWrite = await retryWrite(() =>
+        client.from("watches").insert({
+          id: watch.id,
+          title_id: watch.titleKey,
+          seasons: watch.seasonNumbers,
+          watched_on: watch.watchedOn,
+          note: watch.note,
+          watchers: watch.watchers,
+          picked_by: watch.pickedBy ?? null,
+          created_by: userId,
+          household_id: householdId,
+        }),
+      );
+      if (watchWrite.error) {
+        setSyncError(errorText(watchWrite.error));
+        return false;
+      }
+
+      if (ownRatings.length) {
+        const ratingWrite = await retryWrite(() =>
+          client.from("ratings").upsert(
+            ownRatings.map((rating) => ({
+              watch_id: rating.watchId,
+              user_id: rating.userId,
+              score: rating.score,
+              updated_at: rating.updatedAt,
+            })),
+          ),
+        );
+        if (ratingWrite.error) setSyncError(errorText(ratingWrite.error));
+      }
+
+      const currentItems = dataRef.current.listItems;
+      const nextItems = reconcileAfterLog(currentItems, input.title, now);
+      if (nextItems !== currentItems) {
+        const removedIds = currentItems
+          .filter((item) => !nextItems.some((next) => next.id === item.id))
+          .map((item) => item.id);
+        const changed = nextItems.filter((next) =>
+          currentItems.some((item) => item.id === next.id && item.status !== next.status),
+        );
+
+        for (const id of removedIds) {
+          const { error } = await retryWrite(() => client.from("list_items").delete().eq("id", id));
+          if (error) setSyncError(errorText(error));
+        }
+        for (const item of changed) {
+          const { error } = await retryWrite(() =>
+            client
+              .from("list_items")
+              .update({ status: item.status, updated_at: item.updatedAt })
+              .eq("id", item.id),
+          );
+          if (error) setSyncError(errorText(error));
+        }
+      }
+
       setData((current) => ({
         ...current,
         titles: { ...current.titles, [input.title.key]: input.title },
-        watches: [watch, ...current.watches],
-        ratings: [...current.ratings, ...nextRatings],
+        watches: [watch, ...current.watches.filter((existing) => existing.id !== watch.id)],
+        ratings: [
+          ...current.ratings.filter(
+            (rating) => !ownRatings.some((own) => own.watchId === rating.watchId),
+          ),
+          ...ownRatings,
+        ],
         listItems: reconcileAfterLog(current.listItems, input.title, now),
       }));
+
+      for (const rating of ownRatings) {
+        persistedRatings.current.set(`${rating.watchId}:${rating.userId}`, rating);
+      }
+      void loadCloud();
       return true;
-    }
-
-    const client = supabase;
-    const titleWrite = await retryWrite(() =>
-      client.from("titles").upsert({ id: input.title.key, payload: input.title, updated_at: now }),
-    );
-    if (titleWrite.error) {
-      setSyncError(errorText(titleWrite.error));
+    } catch (error) {
+      setSyncError(errorText(error));
       return false;
     }
-
-    const watchWrite = await retryWrite(() =>
-      client.from("watches").insert({
-        id: watch.id,
-        title_id: watch.titleKey,
-        season: watch.seasonNumber,
-        watched_on: watch.watchedOn,
-        note: watch.note,
-        watchers: watch.watchers,
-        picked_by: watch.pickedBy ?? null,
-        created_by: userId,
-        household_id: household?.id ?? null,
-      }),
-    );
-    if (watchWrite.error) {
-      setSyncError(errorText(watchWrite.error));
-      return false;
-    }
-
-    const ownRatings = nextRatings
-      .filter((rating) => rating.userId === userId)
-      .map((rating) => ({
-        watch_id: rating.watchId,
-        user_id: rating.userId,
-        score: rating.score,
-        updated_at: now,
-      }));
-
-    if (ownRatings.length) {
-      const ratingWrite = await retryWrite(() => client.from("ratings").upsert(ownRatings));
-      if (ratingWrite.error) setSyncError(errorText(ratingWrite.error));
-    }
-
-    const currentItems = data.listItems;
-    const nextItems = reconcileAfterLog(currentItems, input.title, now);
-    if (nextItems !== currentItems) {
-      const removedIds = currentItems
-        .filter((item) => !nextItems.some((next) => next.id === item.id))
-        .map((item) => item.id);
-      const changed = nextItems.filter((next) =>
-        currentItems.some((item) => item.id === next.id && item.status !== next.status),
-      );
-
-      for (const id of removedIds) {
-        const { error } = await retryWrite(() => client.from("list_items").delete().eq("id", id));
-        if (error) setSyncError(errorText(error));
-      }
-      for (const item of changed) {
-        const { error } = await retryWrite(() =>
-          client
-            .from("list_items")
-            .update({ status: item.status, updated_at: item.updatedAt })
-            .eq("id", item.id),
-        );
-        if (error) setSyncError(errorText(error));
-      }
-      setData((current) => ({ ...current, listItems: nextItems }));
-    }
-
-    await loadCloud();
-    return true;
   }
 
   async function setRating(watchId: string, targetUserId: string, score: number): Promise<boolean> {
+    if (!supabase || !userId || targetUserId !== userId) return false;
+    const client = supabase;
     const next: Rating = {
       watchId,
       userId: targetUserId,
       score,
       updatedAt: new Date().toISOString(),
     };
+    const key = `${watchId}:${targetUserId}`;
 
-    if (mode === "local" || !supabase) {
-      setData((current) => withRating(current, next));
-      return true;
+    if (!persistedRatings.current.has(key)) {
+      persistedRatings.current.set(
+        key,
+        dataRef.current.ratings.find(
+          (rating) => rating.watchId === watchId && rating.userId === targetUserId,
+        ) ?? null,
+      );
     }
-
-    if (targetUserId !== userId) return false;
-
-    const client = supabase;
-    const previous =
-      data.ratings.find((rating) => rating.watchId === watchId && rating.userId === targetUserId) ??
-      null;
+    const previous = persistedRatings.current.get(key) ?? null;
     setData((current) => withRating(current, next));
 
-    const key = `${watchId}:${targetUserId}`;
     const queued = (ratingWrites.current.get(key) ?? Promise.resolve())
       .catch(() => undefined)
       .then(() =>
@@ -427,237 +454,250 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
     ratingWrites.current.set(key, queued);
 
-    const { error } = await queued;
-    const isLatest = ratingWrites.current.get(key) === queued;
-    if (isLatest) ratingWrites.current.delete(key);
-    if (error) {
+    const restore = () =>
+      setData((current) =>
+        previous
+          ? withRating(current, previous)
+          : {
+              ...current,
+              ratings: current.ratings.filter(
+                (rating) => !(rating.watchId === watchId && rating.userId === targetUserId),
+              ),
+            },
+      );
+
+    try {
+      const { error } = await queued;
+      const isLatest = ratingWrites.current.get(key) === queued;
+      if (isLatest) ratingWrites.current.delete(key);
+      if (error) {
+        setSyncError(errorText(error));
+        if (isLatest) restore();
+        return false;
+      }
+      persistedRatings.current.set(key, next);
+      return true;
+    } catch (error) {
       setSyncError(errorText(error));
-      if (isLatest) {
-        setData((current) =>
-          previous
-            ? withRating(current, previous)
-            : {
-                ...current,
-                ratings: current.ratings.filter(
-                  (rating) => !(rating.watchId === watchId && rating.userId === targetUserId),
-                ),
-              },
-        );
+      if (ratingWrites.current.get(key) === queued) {
+        ratingWrites.current.delete(key);
+        restore();
       }
       return false;
     }
-    return true;
   }
 
   async function removeWatch(watchId: string) {
-    if (mode === "local" || !supabase) {
+    if (!supabase) return false;
+    const client = supabase;
+    try {
+      const { error } = await retryWrite(() => client.from("watches").delete().eq("id", watchId));
+      if (error) {
+        setSyncError(errorText(error));
+        return false;
+      }
       setData((current) => ({
         ...current,
         watches: current.watches.filter((watch) => watch.id !== watchId),
         ratings: current.ratings.filter((rating) => rating.watchId !== watchId),
       }));
       return true;
-    }
-
-    const client = supabase;
-    const { error } = await retryWrite(() => client.from("watches").delete().eq("id", watchId));
-    if (error) {
+    } catch (error) {
       setSyncError(errorText(error));
       return false;
     }
-    setData((current) => ({
-      ...current,
-      watches: current.watches.filter((watch) => watch.id !== watchId),
-      ratings: current.ratings.filter((rating) => rating.watchId !== watchId),
-    }));
-    return true;
   }
 
   async function renamePerson(personId: string, name: string) {
     const trimmed = name.trim();
-    if (!trimmed) return;
-
-    if (mode === "local" || !supabase) {
+    if (!trimmed || !supabase || personId !== userId) return;
+    const client = supabase;
+    try {
+      const { error } = await retryWrite(() =>
+        client.from("members").update({ display_name: trimmed }).eq("user_id", personId),
+      );
+      if (error) {
+        setSyncError(errorText(error));
+        return;
+      }
       setData((current) => ({
         ...current,
         people: current.people.map((person) =>
           person.id === personId ? { ...person, name: trimmed } : person,
         ),
       }));
-      return;
-    }
-
-    if (personId !== userId) return;
-    const client = supabase;
-    const { error } = await retryWrite(() =>
-      client.from("members").update({ display_name: trimmed }).eq("user_id", personId),
-    );
-    if (error) {
+    } catch (error) {
       setSyncError(errorText(error));
-      return;
     }
-    setData((current) => ({
-      ...current,
-      people: current.people.map((person) =>
-        person.id === personId ? { ...person, name: trimmed } : person,
-      ),
-    }));
   }
 
-  async function addToList(title: Title): Promise<boolean> {
-    const existing = data.listItems.find((item) => item.titleKey === title.key);
+  async function addToList(title: Title): Promise<AddToListResult> {
+    if (!supabase || !userId) return "failed";
+    const client = supabase;
+    const existing = dataRef.current.listItems.find((item) => item.titleKey === title.key);
     if (existing) {
-      if (existing.status !== "done" && existing.status !== "dropped") return false;
-      await setListStatus(existing.id, "queued");
-      return true;
+      if (existing.status !== "done" && existing.status !== "dropped") return "exists";
+      const revived = await setListStatus(existing.id, "queued");
+      return revived ? "added" : "failed";
     }
+    if (listWrites.current.has(title.key)) return "exists";
 
-    const now = new Date().toISOString();
-    const item: ListItem = {
-      id: crypto.randomUUID(),
-      titleKey: title.key,
-      status: "queued",
-      addedBy: userId,
-      createdAt: now,
-      updatedAt: now,
-    };
+    listWrites.current.add(title.key);
+    try {
+      const now = new Date().toISOString();
+      const item: ListItem = {
+        id: crypto.randomUUID(),
+        titleKey: title.key,
+        status: "queued",
+        addedBy: userId,
+        createdAt: now,
+        updatedAt: now,
+      };
 
-    if (mode === "local" || !supabase) {
+      const titleWrite = await retryWrite(() =>
+        client.from("titles").upsert({ id: title.key, payload: title, updated_at: now }),
+      );
+      if (titleWrite.error) {
+        setSyncError(errorText(titleWrite.error));
+        return "failed";
+      }
+
+      const listWrite = await retryWrite(() =>
+        client.from("list_items").insert({
+          id: item.id,
+          title_id: item.titleKey,
+          status: item.status,
+          added_by: userId,
+          household_id: householdId,
+        }),
+      );
+      if (listWrite.error) {
+        setSyncError(errorText(listWrite.error));
+        return "failed";
+      }
+
       setData((current) => ({
         ...current,
         titles: { ...current.titles, [title.key]: title },
-        listItems: [item, ...current.listItems],
+        listItems: current.listItems.some((entry) => entry.titleKey === title.key)
+          ? current.listItems
+          : [item, ...current.listItems],
       }));
-      return true;
+      return "added";
+    } catch (error) {
+      setSyncError(errorText(error));
+      return "failed";
+    } finally {
+      listWrites.current.delete(title.key);
     }
-
-    const client = supabase;
-    const titleWrite = await retryWrite(() =>
-      client.from("titles").upsert({ id: title.key, payload: title, updated_at: now }),
-    );
-    if (titleWrite.error) {
-      setSyncError(errorText(titleWrite.error));
-      return false;
-    }
-
-    const listWrite = await retryWrite(() =>
-      client.from("list_items").insert({
-        id: item.id,
-        title_id: item.titleKey,
-        status: item.status,
-        added_by: userId,
-        household_id: household?.id ?? null,
-      }),
-    );
-    if (listWrite.error) {
-      setSyncError(errorText(listWrite.error));
-      return false;
-    }
-
-    setData((current) => ({
-      ...current,
-      titles: { ...current.titles, [title.key]: title },
-      listItems: [item, ...current.listItems],
-    }));
-    return true;
   }
 
-  async function setListStatus(itemId: string, status: ListStatus) {
+  async function setListStatus(itemId: string, status: ListStatus): Promise<boolean> {
+    if (!supabase) return false;
+    const client = supabase;
     const now = new Date().toISOString();
-
-    if (mode === "local" || !supabase) {
+    try {
+      const { error } = await retryWrite(() =>
+        client.from("list_items").update({ status, updated_at: now }).eq("id", itemId),
+      );
+      if (error) {
+        setSyncError(errorText(error));
+        return false;
+      }
       setData((current) => ({
         ...current,
         listItems: current.listItems.map((item) =>
           item.id === itemId ? { ...item, status, updatedAt: now } : item,
         ),
       }));
-      return;
-    }
-
-    const client = supabase;
-    const { error } = await retryWrite(() =>
-      client.from("list_items").update({ status, updated_at: now }).eq("id", itemId),
-    );
-    if (error) {
+      return true;
+    } catch (error) {
       setSyncError(errorText(error));
-      return;
+      return false;
     }
-    setData((current) => ({
-      ...current,
-      listItems: current.listItems.map((item) =>
-        item.id === itemId ? { ...item, status, updatedAt: now } : item,
-      ),
-    }));
   }
 
   async function removeFromList(itemId: string) {
-    if (mode === "local" || !supabase) {
+    if (!supabase) return false;
+    const client = supabase;
+    try {
+      const { error } = await retryWrite(() => client.from("list_items").delete().eq("id", itemId));
+      if (error) {
+        setSyncError(errorText(error));
+        return false;
+      }
       setData((current) => ({
         ...current,
         listItems: current.listItems.filter((item) => item.id !== itemId),
       }));
       return true;
-    }
-
-    const client = supabase;
-    const { error } = await retryWrite(() => client.from("list_items").delete().eq("id", itemId));
-    if (error) {
+    } catch (error) {
       setSyncError(errorText(error));
       return false;
     }
-    setData((current) => ({
-      ...current,
-      listItems: current.listItems.filter((item) => item.id !== itemId),
-    }));
-    return true;
   }
 
   async function refresh() {
-    if (mode === "cloud") await loadCloud();
+    await loadCloud();
   }
 
   async function createInvite(): Promise<string | null> {
-    if (mode !== "cloud" || !supabase || !userId) return null;
-    const code = generateInviteCode();
+    if (!supabase || !userId || !household) return null;
     const client = supabase;
-    const { error } = await retryWrite(() =>
-      client
-        .from("invite_codes")
-        .insert({ code, created_by: userId, household_id: household?.id ?? null }),
-    );
-    if (error) {
+    const code = generateInviteCode();
+    try {
+      const { error } = await retryWrite(() =>
+        client
+          .from("invite_codes")
+          .insert({ code, created_by: userId, household_id: household.id }),
+      );
+      if (error) {
+        setSyncError(errorText(error));
+        return null;
+      }
+      await loadCloud();
+      return code;
+    } catch (error) {
       setSyncError(errorText(error));
       return null;
     }
-    await loadCloud();
-    return code;
   }
 
   async function revokeInvite(code: string) {
-    if (mode !== "cloud" || !supabase) return false;
+    if (!supabase) return false;
     const client = supabase;
-    const { error } = await retryWrite(() => client.from("invite_codes").delete().eq("code", code));
-    if (error) {
+    try {
+      const { error } = await retryWrite(() =>
+        client.from("invite_codes").delete().eq("code", code),
+      );
+      if (error) {
+        setSyncError(errorText(error));
+        return false;
+      }
+      setInvites((current) => current.filter((invite) => invite.code !== code));
+      return true;
+    } catch (error) {
       setSyncError(errorText(error));
       return false;
     }
-    setInvites((current) => current.filter((invite) => invite.code !== code));
-    return true;
   }
 
   async function redeemInvite(code: string, displayName: string): Promise<string | null> {
-    if (mode !== "cloud" || !supabase) return "Cloud sync is not configured.";
+    if (!supabase) return "Cloud sync is not configured.";
     const client = supabase;
-    const { error } = await retryWrite(() =>
-      client.rpc("redeem_invite", {
-        invite_code: code,
-        display_name: displayName,
-      }),
-    );
-    if (error) return errorText(error);
-    await loadCloud();
-    return null;
+    try {
+      const { error } = await retryWrite(() =>
+        client.rpc("redeem_invite", {
+          invite_code: code,
+          display_name: displayName,
+        }),
+      );
+      if (error) return errorText(error);
+      await loadCloud();
+      return null;
+    } catch (error) {
+      return errorText(error);
+    }
   }
 
   async function createHousehold(
@@ -665,100 +705,87 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     displayName: string,
     inviteCode: string,
   ): Promise<string | null> {
-    if (mode !== "cloud" || !supabase) return "Cloud sync is not configured.";
+    if (!supabase) return "Cloud sync is not configured.";
     const client = supabase;
-    const { error } = await retryWrite(() =>
-      client.rpc("create_household", {
-        household_name: householdName,
-        display_name: displayName,
-        invite_code: inviteCode.trim() || null,
-      }),
-    );
-    if (error) return errorText(error);
-    await loadCloud();
-    return null;
+    try {
+      const { error } = await retryWrite(() =>
+        client.rpc("create_household", {
+          household_name: householdName,
+          display_name: displayName,
+          invite_code: inviteCode.trim() || null,
+        }),
+      );
+      if (error) return errorText(error);
+      await loadCloud();
+      return null;
+    } catch (error) {
+      return errorText(error);
+    }
   }
 
   async function renameHousehold(name: string) {
     const trimmed = name.trim();
-    if (!trimmed || mode !== "cloud" || !supabase || !household) return;
+    if (!trimmed || !supabase || !household) return;
     const client = supabase;
-    const { error } = await retryWrite(() =>
-      client.from("households").update({ name: trimmed }).eq("id", household.id),
-    );
-    if (error) {
+    try {
+      const { error } = await retryWrite(() =>
+        client.from("households").update({ name: trimmed }).eq("id", household.id),
+      );
+      if (error) {
+        setSyncError(errorText(error));
+        return;
+      }
+      setHousehold({ ...household, name: trimmed });
+    } catch (error) {
       setSyncError(errorText(error));
-      return;
     }
-    setHousehold({ ...household, name: trimmed });
   }
 
   async function createAppInvite(): Promise<string | null> {
-    if (mode !== "cloud" || !supabase) return null;
+    if (!supabase || !userId) return null;
     const client = supabase;
-    const { data, error } = await retryWrite(() => client.rpc("create_app_invite"));
-    if (error) {
+    try {
+      const { data, error } = await retryWrite(() => client.rpc("create_app_invite"));
+      if (error) {
+        setSyncError(errorText(error));
+        return null;
+      }
+      await loadCloud();
+      return typeof data === "string" ? data : null;
+    } catch (error) {
       setSyncError(errorText(error));
       return null;
     }
-    await loadCloud();
-    return typeof data === "string" ? data : null;
   }
 
   async function revokeAppInvite(code: string) {
-    if (mode !== "cloud" || !supabase) return false;
+    if (!supabase) return false;
     const client = supabase;
-    const { error } = await retryWrite(() => client.from("app_invites").delete().eq("code", code));
-    if (error) {
+    try {
+      const { error } = await retryWrite(() =>
+        client.from("app_invites").delete().eq("code", code),
+      );
+      if (error) {
+        setSyncError(errorText(error));
+        return false;
+      }
+      setAppInvites((current) => current.filter((invite) => invite.code !== code));
+      return true;
+    } catch (error) {
       setSyncError(errorText(error));
       return false;
     }
-    setAppInvites((current) => current.filter((invite) => invite.code !== code));
-    return true;
-  }
-
-  function exportData() {
-    return JSON.stringify(data, null, 2);
-  }
-
-  function importData(json: string) {
-    if (mode === "cloud") return false;
-    try {
-      const parsed = JSON.parse(json) as Partial<WeSawData>;
-      if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.watches)) return false;
-      setData({
-        people:
-          Array.isArray(parsed.people) && parsed.people.length >= 2
-            ? (parsed.people as Person[])
-            : defaultPeople,
-        titles:
-          parsed.titles && typeof parsed.titles === "object"
-            ? (parsed.titles as Record<string, Title>)
-            : {},
-        watches: parsed.watches as Watch[],
-        ratings: Array.isArray(parsed.ratings) ? (parsed.ratings as Rating[]) : [],
-        listItems: Array.isArray(parsed.listItems) ? (parsed.listItems as ListItem[]) : [],
-      });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  function clearAll() {
-    setData((current) => ({ ...emptyData(), people: current.people }));
   }
 
   const value: WeSawStore = {
-    ready,
-    mode,
+    ready: userId != null && loadedUserId === userId,
     people,
     userId,
     household,
     needsOnboarding,
-    partnerJoined,
-    clearPartnerJoined: () => setPartnerJoined(false),
-    signedOut: mode === "cloud" && !auth.isAuthLoading && !userId,
+    partnerJoined: partnerJoinedFor === userId,
+    clearPartnerJoined: () => setPartnerJoinedFor(null),
+    signedOut: !auth.isAuthLoading && !userId,
     syncError,
     clearSyncError: () => setSyncError(""),
     titles: data.titles,
@@ -768,7 +795,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setListStatus,
     removeFromList,
     nameFor: (id) => people.find((person) => person.id === id)?.name ?? "Member",
-    canEditScore: (id, watchers) => watchers.includes(id) && (mode === "local" || id === userId),
+    canEditScore: (id, watchers) => watchers.includes(id) && id === userId,
     logWatch,
     setRating,
     removeWatch,
@@ -784,9 +811,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     revokeAppInvite,
     createHousehold,
     refresh,
-    exportData,
-    importData,
-    clearAll,
     auth,
   };
 

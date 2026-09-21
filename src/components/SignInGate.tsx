@@ -1,35 +1,11 @@
-import { lazy, Suspense, useState } from "react";
 import { LogoLockup } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { readInviteCode } from "@/lib/invite";
 import { useStore } from "@/lib/store";
 
-const DemoPreview = lazy(() =>
-  import("@/views/DemoPreview").then((module) => ({ default: module.DemoPreview })),
-);
-
 export function SignInGate() {
   const { auth } = useStore();
-  const [demoOpen, setDemoOpen] = useState(false);
   const invited = Boolean(readInviteCode());
-
-  if (demoOpen) {
-    return (
-      <Suspense
-        fallback={
-          <div className="flex min-h-screen items-center justify-center p-6">
-            <Skeleton className="h-64 w-full max-w-[420px]" />
-          </div>
-        }
-      >
-        <DemoPreview
-          onClose={() => setDemoOpen(false)}
-          onSignIn={() => void auth.signInWithGoogle()}
-        />
-      </Suspense>
-    );
-  }
 
   return (
     <div className="flex min-h-screen items-center justify-center p-6">
@@ -53,9 +29,6 @@ export function SignInGate() {
           disabled={auth.isAuthLoading}
         >
           Continue with Google
-        </Button>
-        <Button variant="outline" className="w-full" onClick={() => setDemoOpen(true)}>
-          See a sample household
         </Button>
         {auth.authMessage ? <p className="text-bad text-sm">{auth.authMessage}</p> : null}
       </div>

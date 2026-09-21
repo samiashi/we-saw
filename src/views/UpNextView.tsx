@@ -246,7 +246,9 @@ export function UpNextView() {
                   item={item}
                   title={title}
                   predictions={predictionMap.get(title.key) ?? null}
-                  nextEpisode={air[title.key] ?? title.nextEpisode ?? null}
+                  nextEpisode={
+                    Object.hasOwn(air, title.key) ? air[title.key] : (title.nextEpisode ?? null)
+                  }
                   onLog={setSelected}
                 />
               ))}

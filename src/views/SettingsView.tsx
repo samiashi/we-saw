@@ -5,7 +5,6 @@ import { Select } from "@/components/ui/select";
 import { useToast } from "@/hooks/useToast";
 import { catalogHealth, type CatalogHealth } from "@/lib/api";
 import { copyText } from "@/lib/clipboard";
-import { localDateString } from "@/lib/dates";
 import { getRegion, REGIONS, setRegion } from "@/lib/region";
 import { useStore } from "@/lib/store";
 import { getTheme, setTheme, type ThemeName } from "@/lib/theme";
@@ -43,7 +42,6 @@ function StatusRow({ on, label, detail }: { on: boolean; label: string; detail: 
 
 export function SettingsView() {
   const {
-    mode,
     people,
     userId,
     nameFor,
@@ -57,9 +55,6 @@ export function SettingsView() {
     createAppInvite,
     revokeAppInvite,
     refresh,
-    exportData,
-    importData,
-    clearAll,
     auth,
     syncError,
   } = useStore();
@@ -130,30 +125,6 @@ export function SettingsView() {
     if (revoked) toast.show("Friend invite revoked.");
   }
 
-  function download() {
-    const blob = new Blob([exportData()], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `we-saw-${localDateString()}.json`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-    toast.show("Exported your log.");
-  }
-
-  async function handleImport(file: File | undefined) {
-    if (!file) return;
-    const text = await file.text();
-    const ok = importData(text);
-    toast.show(ok ? "Imported your log." : "That file could not be imported.");
-  }
-
-  function handleClear() {
-    if (!window.confirm("Delete every logged watch on this device?")) return;
-    clearAll();
-    toast.show("Cleared your log.");
-  }
-
   const missingKeys = health !== "loading" && health !== null && (!health.tmdb || !health.omdb);
 
   return (
@@ -164,7 +135,7 @@ export function SettingsView() {
 
       <Section title="Who's watching">
         {people.map((person) => {
-          const editable = mode === "local" || person.id === userId;
+          const editable = person.id === userId;
           return (
             <div key={person.id} className="flex flex-col gap-2">
               <label className="text-muted text-[13px]">
@@ -183,7 +154,7 @@ export function SettingsView() {
         })}
       </Section>
 
-      {mode === "cloud" && household ? (
+      {household ? (
         <Section title="Household">
           <div className="flex flex-col gap-2">
             <label className="text-muted text-[13px]" htmlFor="household-name">
@@ -204,72 +175,68 @@ export function SettingsView() {
         </Section>
       ) : null}
 
-      {mode === "cloud" ? (
-        <Section title="Invite your partner">
-          {activeInvite ? (
-            <>
-              <p className="text-muted text-[13px]">
-                Share the link or the code — she signs in with Google and joins automatically. One
-                use only.
-              </p>
-              <code className="bg-bg border-line text-accent block w-full rounded-xl border p-3 text-center font-mono text-2xl font-bold tracking-[0.28em]">
-                {activeInvite.code}
-              </code>
-              <div className="flex flex-wrap gap-2">
-                <Button onClick={() => void copyInviteLink(activeInvite.code)}>
-                  Copy invite link
-                </Button>
-                <Button variant="ghost" onClick={() => void copyCode(activeInvite.code)}>
-                  Copy code
-                </Button>
-                <Button variant="danger" onClick={() => void handleRevokeInvite(activeInvite.code)}>
-                  Revoke
-                </Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-muted text-[13px]">
-                No active invite. Generate a one-use code for your partner.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Button onClick={() => void handleCreateInvite()}>Generate invite code</Button>
-              </div>
-            </>
-          )}
-        </Section>
-      ) : null}
-
-      {mode === "cloud" ? (
-        <Section title="Invite a friend">
-          <p className="text-muted text-[13px]">
-            Give a friend this code so they can start their own household. Households never see each
-            other's watches or ratings.
-          </p>
-          {activeAppInvite ? (
-            <>
-              <code className="bg-bg border-line text-accent block w-full rounded-xl border p-3 text-center font-mono text-2xl font-bold tracking-[0.28em]">
-                {activeAppInvite.code}
-              </code>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="ghost" onClick={() => void copyCode(activeAppInvite.code)}>
-                  Copy code
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={() => void handleRevokeAppInvite(activeAppInvite.code)}
-                >
-                  Revoke
-                </Button>
-              </div>
-            </>
-          ) : (
+      <Section title="Invite your partner">
+        {activeInvite ? (
+          <>
+            <p className="text-muted text-[13px]">
+              Share the link or the code — she signs in with Google and joins automatically. One use
+              only.
+            </p>
+            <code className="bg-bg border-line text-accent block w-full rounded-xl border p-3 text-center font-mono text-2xl font-bold tracking-[0.28em]">
+              {activeInvite.code}
+            </code>
             <div className="flex flex-wrap gap-2">
-              <Button onClick={() => void handleCreateAppInvite()}>Generate friend invite</Button>
+              <Button onClick={() => void copyInviteLink(activeInvite.code)}>
+                Copy invite link
+              </Button>
+              <Button variant="ghost" onClick={() => void copyCode(activeInvite.code)}>
+                Copy code
+              </Button>
+              <Button variant="danger" onClick={() => void handleRevokeInvite(activeInvite.code)}>
+                Revoke
+              </Button>
             </div>
-          )}
-        </Section>
-      ) : null}
+          </>
+        ) : (
+          <>
+            <p className="text-muted text-[13px]">
+              No active invite. Generate a one-use code for your partner.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => void handleCreateInvite()}>Generate invite code</Button>
+            </div>
+          </>
+        )}
+      </Section>
+
+      <Section title="Invite a friend">
+        <p className="text-muted text-[13px]">
+          Give a friend this code so they can start their own household. Households never see each
+          other's watches or ratings.
+        </p>
+        {activeAppInvite ? (
+          <>
+            <code className="bg-bg border-line text-accent block w-full rounded-xl border p-3 text-center font-mono text-2xl font-bold tracking-[0.28em]">
+              {activeAppInvite.code}
+            </code>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="ghost" onClick={() => void copyCode(activeAppInvite.code)}>
+                Copy code
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => void handleRevokeAppInvite(activeAppInvite.code)}
+              >
+                Revoke
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => void handleCreateAppInvite()}>Generate friend invite</Button>
+          </div>
+        )}
+      </Section>
 
       <Section title="Ratings & metadata">
         <StatusRow
@@ -293,35 +260,23 @@ export function SettingsView() {
             </code>
             <p className="text-muted text-[13px]">
               TMDB key: themoviedb.org → Settings → API. OMDb key: omdbapi.com/apikey.aspx. Until
-              then the app uses the bundled starter catalog.
+              then search, posters and critic scores are unavailable.
             </p>
           </div>
         ) : null}
       </Section>
 
       <Section title="Sync">
-        {mode === "cloud" ? (
-          <>
-            <StatusRow on label={auth.session?.user.email ?? "Signed in"} detail="cloud mode" />
-            <div className="flex flex-wrap gap-2">
-              <Button variant="ghost" onClick={() => void refresh()}>
-                Sync now
-              </Button>
-              <Button variant="ghost" onClick={() => void auth.signOut()}>
-                Sign out
-              </Button>
-            </div>
-            {syncError ? <p className="text-bad text-[13px]">{syncError}</p> : null}
-          </>
-        ) : (
-          <p className="text-muted text-[13px]">
-            This log lives on this device only. To share it between both phones: create a Supabase
-            project, apply the SQL under <code className="font-mono">supabase/migrations</code>, add{" "}
-            <code className="font-mono">VITE_SUPABASE_URL</code> and{" "}
-            <code className="font-mono">VITE_SUPABASE_PUBLISHABLE_KEY</code> to the environment, and
-            deploy to Vercel.
-          </p>
-        )}
+        <StatusRow on label={auth.session?.user.email ?? "Signed in"} detail="synced" />
+        <div className="flex flex-wrap gap-2">
+          <Button variant="ghost" onClick={() => void refresh()}>
+            Sync now
+          </Button>
+          <Button variant="ghost" onClick={() => void auth.signOut()}>
+            Sign out
+          </Button>
+        </div>
+        {syncError ? <p className="text-bad text-[13px]">{syncError}</p> : null}
       </Section>
 
       <Section title="Appearance">
@@ -362,32 +317,6 @@ export function SettingsView() {
         <p className="text-muted text-[13px]">
           Used to show streaming providers for your country. Availability data by JustWatch.
         </p>
-      </Section>
-
-      <Section title="Data">
-        <div className="flex flex-wrap gap-2">
-          <Button variant="ghost" onClick={download}>
-            Export JSON
-          </Button>
-          {mode === "local" ? (
-            <>
-              <Button variant="ghost" asChild>
-                <label className="relative cursor-pointer overflow-hidden">
-                  Import JSON
-                  <input
-                    type="file"
-                    accept="application/json"
-                    className="absolute inset-0 cursor-pointer opacity-0"
-                    onChange={(event) => void handleImport(event.target.files?.[0])}
-                  />
-                </label>
-              </Button>
-              <Button variant="danger" onClick={handleClear}>
-                Clear all
-              </Button>
-            </>
-          ) : null}
-        </div>
       </Section>
 
       <Section title="About">

@@ -14,9 +14,9 @@ A shared movie and TV diary for couples and small groups: log what you watched, 
 
 ## Features
 
-- Search movies and shows (TMDB), log a movie or a single TV season with the date (or "Not sure") and a note.
+- Search movies and shows (TMDB), log a movie or pick any set of TV seasons (e.g. 10 of 14) with one shared rating, plus the date (or "Not sure") and a note.
 - **Multi-household**: every group gets its own private data; friends start their own household with a friend-invite code you generate.
-- **Up Next** tab: queue titles, mark what's watching, and drop what you bailed on — logging a movie removes it, logging a season moves it to Watching.
+- **Up Next** tab: queue titles, mark what's watching, and drop what you bailed on — logging a movie removes it, logging a TV run moves it to Watching.
 - **Tonight's pick**: a taste engine builds a genre/actor/director profile per person and ranks your list by the safer minimum score, with a reason line.
 - **Discover**: Popular this week and "Because you loved X" rows, with a _Safe for us_ toggle that ranks by the lower of your two predicted scores.
 - **Where to watch**: streaming and free providers for your country (JustWatch via TMDB) in discover and history sheets, plus **next-episode air dates** on TV shows in Up Next.
@@ -29,35 +29,30 @@ A shared movie and TV diary for couples and small groups: log what you watched, 
 - **Who picked it** is captured with one tap, and the **Year in Review** exports a shareable 1080×1350 image (share sheet on mobile, download elsewhere).
 - **Year in Review**: a per-year recap page (top 5, genres, faces, taste match, solo vs together) with one-tap "copy recap" text to paste into chat.
 - Invite your partner with a one-use code or an **invite link** (`?invite=CODE`) — she signs in with Google and joins in one tap.
-- **First-run checklist** (log a watch, invite your partner, pick your region), a **sample-household preview** on the sign-in screen, and in-context hints the first few times you log.
-- Works offline: the service worker precaches the app shell, caches TMDB images, and serves cached catalog data when the network is slow or gone.
-- Two modes: local-only (this device, localStorage) or synced between phones (Supabase + Google login, realtime refresh).
-- Installable PWA, dark-only, mobile-first, with a Charcoal or AMOLED theme.
+- **First-run checklist** (log a watch, invite your partner, pick your region) and in-context hints the first few times you log.
+- Synced between phones with Supabase + Google login and realtime refresh; nothing is stored on the device beyond your session.
+- Installable PWA with a service worker that precaches the app shell and TMDB images for fast repeat visits.
+- Dark-only, mobile-first, with a Charcoal or AMOLED theme.
 
 ## Stack
 
 - React + TypeScript + Vite
 - Tailwind CSS v4 + shadcn-style primitives (Radix Slot, vaul drawer, lucide icons)
 - Recharts and the Year in Review are lazily loaded; the app shell stays small
-- Supabase Auth and Postgres (optional but recommended)
+- Supabase Auth and Postgres
 - Vercel, with a serverless `/api/catalog` function that keeps API keys server-side
 
 ## Local Development
 
 ```bash
 npm install
+cp .env.example .env.local
 npm run dev
 ```
 
 Open `http://127.0.0.1:4183/`.
 
-Without env vars the app runs local-only against the starter catalog. To enable real search and critic scores, create `.env.local`:
-
-```bash
-cp .env.example .env.local
-```
-
-and set:
+The app is online-only: it needs a Supabase project and the catalog keys to run. Fill in `.env.local`:
 
 ```bash
 TMDB_API_KEY=          # themoviedb.org → Settings → API (free)
@@ -66,6 +61,8 @@ VITE_SUPABASE_URL=
 VITE_SUPABASE_PUBLISHABLE_KEY=
 VITE_SITE_URL=
 ```
+
+Without `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` the app shows a setup screen instead of the log.
 
 `npm run icons` regenerates the PWA icons from the same geometry as `public/icon.svg`, and `public/logo.svg` is the wordmark lockup (dependency-free PNG writer, no image deps). The mark is two eyes in the couple colours — amber and coral looking at each other.
 
@@ -130,14 +127,13 @@ Deploy to Vercel and add the env vars above in the project settings. `server/cat
 ```
 api/catalog.js        Vercel function: ?action=health|search|title|ratings
 server/catalog.js     TMDB + OMDb logic (also mounted into the Vite dev server)
-src/lib/store.tsx     Store provider: local/cloud modes, realtime wiring, write-through actions
+src/lib/store.tsx     Store provider: Supabase load, realtime wiring, write-through actions
 src/lib/store/        Pure helpers, cloud row mappers and realtime change handlers
 src/lib/analytics.ts  Pure stat math and the taste engine (unit tested)
-src/lib/seed.ts       Offline starter catalog
 src/lib/theme.ts      Charcoal / AMOLED theme persistence
 src/components/stats/ One small component per analytics section (donut, duel, heatmap, …)
 src/components/ui/    Button, Input, Select, Textarea, Chip, Drawer (vaul), Skeleton, Toast
-src/views/            Log, Up Next, History, Stats, Year in Review, Demo, Settings
+src/views/            Log, Up Next, History, Stats, Year in Review, Settings
 tests/                Vitest suites (analytics, dates, store helpers, retry, components)
 supabase/migrations   Versioned SQL: tables, RLS, realtime, invite RPCs
 supabase/config.toml  Supabase CLI project config
@@ -148,7 +144,7 @@ supabase/config.toml  Supabase CLI project config
 - `households` — the privacy boundary. One per couple/group; everything below hangs off it.
 - `members` — allowlist keyed by `auth.users.id` with `display_name` and `household_id`.
 - `titles` — TMDB metadata cached as JSON, keyed `movie:<id>` / `tv:<id>`, shared across households.
-- `watches` — one row per movie or season. `household_id` scopes it, `watchers uuid[]` is who watched, `picked_by` is who chose it; a joint watch has every member, a solo watch has one. Logging reconciles Up Next: movies flip to `done`, a logged season moves the show to `watching`.
+- `watches` — one row per movie or logged TV run. `seasons int[]` lists the watched seasons (null = whole show) and one rating covers the run; `household_id` scopes it, `watchers uuid[]` is who watched, `picked_by` is who chose it; a joint watch has every member, a solo watch has one. Logging reconciles Up Next: movies flip to `done`, a logged TV run moves the show to `watching`.
 - `ratings` — `(watch_id, user_id)` primary key, score 1–10. RLS: you can only rate watches you are a watcher of, and only as yourself.
 - `list_items` — Up Next entries, unique per `(household_id, title_id)`, `status` in `queued | watching | dropped`.
 - `invite_codes` + `redeem_invite(code, name)` — one-use invite into a household.
@@ -169,4 +165,4 @@ must stay that way.
 - Push nudges ("rate last night's movie", new episodes, watchlist arrivals).
 - Backups: scheduled `supabase db dump` + restore docs.
 - TMDB language/country enrichment for "foreign share" analytics.
-- Episode-level ratings if season-level ever feels too coarse.
+- Episode-level ratings if season-set-level ever feels too coarse.

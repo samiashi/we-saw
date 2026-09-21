@@ -1,11 +1,13 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { BarChart3, History as HistoryIcon, ListVideo, PlusCircle, Settings } from "lucide-react";
 import { OnboardingGate } from "@/components/OnboardingGate";
+import { SetupGate } from "@/components/SetupGate";
 import { SignInGate } from "@/components/SignInGate";
 import { StartChecklist } from "@/components/StartChecklist";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useViewTransition } from "@/hooks/useViewTransition";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { HistoryView } from "@/views/HistoryView";
@@ -38,8 +40,10 @@ export function App() {
     userId,
     syncError,
     clearSyncError,
+    refresh,
   } = useStore();
   const [tab, setTab] = useState<Tab>("log");
+  const [retrying, setRetrying] = useState(false);
   const transition = useViewTransition();
 
   function selectTab(next: Tab) {
@@ -59,11 +63,30 @@ export function App() {
     return () => clearTimeout(timer);
   }, []);
 
+  async function retryLoad() {
+    setRetrying(true);
+    await refresh();
+    setRetrying(false);
+  }
+
+  if (!isSupabaseConfigured) return <SetupGate />;
   if (signedOut) return <SignInGate />;
   if (!ready) {
     return (
       <div className="flex min-h-screen items-center justify-center p-6">
-        <p className="text-muted text-sm">Loading your log…</p>
+        <div className="flex max-w-[420px] flex-col items-center gap-3 text-center">
+          <p className="text-muted text-sm">
+            {syncError ? "Could not load your log." : "Loading your log…"}
+          </p>
+          {syncError ? (
+            <>
+              <p className="text-bad text-[13px]">{syncError}</p>
+              <Button onClick={() => void retryLoad()} disabled={retrying}>
+                {retrying ? "Trying…" : "Try again"}
+              </Button>
+            </>
+          ) : null}
+        </div>
       </div>
     );
   }

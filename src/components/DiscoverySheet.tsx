@@ -61,8 +61,14 @@ export function DiscoverySheet({
 
   async function handleAdd() {
     if (!title) return;
-    const added = await addToList(title);
-    toast.show(added ? `Added ${title.name} to Up Next` : `${title.name} is already on the list`);
+    const result = await addToList(title);
+    toast.show(
+      result === "added"
+        ? `Added ${title.name} to Up Next`
+        : result === "exists"
+          ? `${title.name} is already on the list`
+          : `Could not add ${title.name} to Up Next`,
+    );
   }
 
   return (
@@ -90,7 +96,12 @@ export function DiscoverySheet({
                   <div className="from-surface absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t to-transparent" />
                 </div>
               ) : null}
-              <div className={cn("flex items-start gap-3.5 px-4", hasBackdrop ? "-mt-20" : "pt-1")}>
+              <div
+                className={cn(
+                  "relative flex items-start gap-3.5 px-4",
+                  hasBackdrop ? "-mt-20" : "pt-1",
+                )}
+              >
                 <Poster
                   title={title}
                   className={cn(hasBackdrop && "ring-surface shadow-lg ring-4")}

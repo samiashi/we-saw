@@ -31,6 +31,7 @@ import {
   scoreStats,
   seasonLabel,
   soloEntries,
+  topGenreOverlap,
   totalMinutes,
   watchMinutes,
   watchStreaks,
@@ -61,7 +62,7 @@ function title(overrides: Partial<Title> & Pick<Title, "key" | "name">): Title {
 
 function watch(overrides: Partial<Watch> & Pick<Watch, "id" | "titleKey">): Watch {
   return {
-    seasonNumber: null,
+    seasonNumbers: null,
     watchedOn: "2024-05-01",
     note: "",
     watchers: ["a", "b"],
@@ -108,7 +109,7 @@ const titles: Title[] = [
 const watches: Watch[] = [
   watch({ id: "w1", titleKey: "movie:1" }),
   watch({ id: "w2", titleKey: "movie:2", watchedOn: "2024-06-15" }),
-  watch({ id: "w3", titleKey: "tv:3", seasonNumber: 1, watchedOn: "2024-06-20" }),
+  watch({ id: "w3", titleKey: "tv:3", seasonNumbers: [1], watchedOn: "2024-06-20" }),
 ];
 
 const ratings: Rating[] = [
@@ -194,13 +195,59 @@ describe("watch time", () => {
           ],
         },
       ],
-      [watch({ id: "whole", titleKey: "tv:3", seasonNumber: null, watchedOn: "2024-07-01" })],
+      [watch({ id: "whole", titleKey: "tv:3", seasonNumbers: null, watchedOn: "2024-07-01" })],
       [rating("whole", "a", 8)],
     );
 
     expect(wholeShow[0] && watchMinutes(wholeShow[0])).toBe(30 * 22);
     expect(seasonLabel(wholeShow[0])).toBe("All seasons");
     expect(seasonLabel(entries.find((entry) => entry.watch.id === "w3")!)).toBe("S1");
+  });
+
+  it("sums only the selected seasons and labels the set", () => {
+    const multi = buildEntries(
+      [
+        {
+          ...titles[2],
+          seasons: [
+            { seasonNumber: 1, name: "Season 1", episodeCount: 10, year: "2005" },
+            { seasonNumber: 2, name: "Season 2", episodeCount: 12, year: "2006" },
+            { seasonNumber: 3, name: "Season 3", episodeCount: 8, year: "2007" },
+          ],
+        },
+      ],
+      [
+        watch({
+          id: "part",
+          titleKey: "tv:3",
+          seasonNumbers: [1, 3],
+          watchedOn: "2024-07-01",
+        }),
+      ],
+      [rating("part", "a", 9)],
+    );
+
+    expect(multi[0] && watchMinutes(multi[0])).toBe(30 * 18);
+    expect(seasonLabel(multi[0])).toBe("S1, S3");
+  });
+
+  it("collapses a contiguous season run in the label", () => {
+    const run = buildEntries(
+      [
+        {
+          ...titles[2],
+          seasons: [
+            { seasonNumber: 1, name: "Season 1", episodeCount: 10, year: "2005" },
+            { seasonNumber: 2, name: "Season 2", episodeCount: 12, year: "2006" },
+            { seasonNumber: 3, name: "Season 3", episodeCount: 8, year: "2007" },
+          ],
+        },
+      ],
+      [watch({ id: "run", titleKey: "tv:3", seasonNumbers: [1, 2, 3] })],
+      [],
+    );
+
+    expect(seasonLabel(run[0])).toBe("S1–S3");
   });
 
   it("totals across entries and formats", () => {
@@ -306,7 +353,7 @@ describe("activity and queue analytics", () => {
     [
       watch({ id: "a1", titleKey: "movie:1", watchedOn: "2026-09-21" }),
       watch({ id: "a2", titleKey: "movie:2", watchedOn: "2026-09-26" }),
-      watch({ id: "a3", titleKey: "tv:3", seasonNumber: 1, watchedOn: "2026-09-14" }),
+      watch({ id: "a3", titleKey: "tv:3", seasonNumbers: [1], watchedOn: "2026-09-14" }),
       watch({ id: "a4", titleKey: "movie:1", watchedOn: "2026-09-07" }),
     ],
     [
@@ -383,6 +430,51 @@ describe("activity and queue analytics", () => {
     expect(stats.medianLagDays).toBe(25);
     expect(stats.oldestWaitingDays).toBe(20);
     expect(stats.oldestWaitingKey).toBe("tv:3");
+  });
+
+  it("counts a same-day completion as a zero-day lag", () => {
+    const items: ListItem[] = [
+      {
+        id: "s1",
+        titleKey: "movie:1",
+        status: "done",
+        addedBy: "a",
+        createdAt: new Date(2026, 5, 1, 12).toISOString(),
+        updatedAt: new Date(2026, 5, 1, 20).toISOString(),
+      },
+    ];
+    const watched = buildEntries(
+      titles,
+      [watch({ id: "s1w", titleKey: "movie:1", watchedOn: "2026-06-01" })],
+      [],
+    );
+    const stats = queueStats(items, watched, new Date(2026, 5, 30));
+    expect(stats.sampleSize).toBe(1);
+    expect(stats.medianLagDays).toBe(0);
+  });
+
+  it("matches a rewatch to the first watch after the item was queued", () => {
+    const items: ListItem[] = [
+      {
+        id: "r1",
+        titleKey: "movie:1",
+        status: "done",
+        addedBy: "a",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-02-01T00:00:00.000Z",
+      },
+    ];
+    const watched = buildEntries(
+      titles,
+      [
+        watch({ id: "r0", titleKey: "movie:1", watchedOn: "2020-01-01" }),
+        watch({ id: "r1w", titleKey: "movie:1", watchedOn: "2026-02-01" }),
+      ],
+      [],
+    );
+    const stats = queueStats(items, watched, new Date(2026, 2, 1));
+    expect(stats.sampleSize).toBe(1);
+    expect(stats.medianLagDays).toBe(31);
   });
 
   it("averages the middle two lags for an even sample", () => {
@@ -503,6 +595,78 @@ describe("picks, duels and taste depth", () => {
     expect(rewatches.comfort[0].count).toBe(2);
   });
 
+  it("does not count different seasons as a rewatch", () => {
+    const show = title({ key: "tv:9", name: "Show", type: "tv", genres: ["Drama"] });
+    const seasonEntries = buildEntries(
+      [show],
+      [
+        watch({ id: "s1", titleKey: "tv:9", seasonNumbers: [1], watchedOn: "2026-01-01" }),
+        watch({ id: "s2", titleKey: "tv:9", seasonNumbers: [2], watchedOn: "2026-02-01" }),
+      ],
+      [rating("s1", "a", 8), rating("s2", "a", 8)],
+    );
+    const rewatches = rewatchStats(seasonEntries);
+    expect(rewatches.rewatchedTitles).toBe(0);
+    expect(rewatches.rate).toBe(0);
+  });
+
+  it("still counts two watches of the same season as a rewatch", () => {
+    const show = title({ key: "tv:9", name: "Show", type: "tv", genres: ["Drama"] });
+    const rewatchEntries = buildEntries(
+      [show],
+      [
+        watch({ id: "s1a", titleKey: "tv:9", seasonNumbers: [1], watchedOn: "2025-01-01" }),
+        watch({ id: "s1b", titleKey: "tv:9", seasonNumbers: [1], watchedOn: "2026-02-01" }),
+      ],
+      [rating("s1a", "a", 8), rating("s1b", "a", 9)],
+    );
+    const rewatches = rewatchStats(rewatchEntries);
+    expect(rewatches.rewatchedTitles).toBe(1);
+    expect(rewatches.comfort[0].name).toBe("Show · S1");
+    expect(rewatches.comfort[0].count).toBe(2);
+  });
+
+  it("counts the same season set twice as a rewatch", () => {
+    const show = title({ key: "tv:9", name: "Show", type: "tv", genres: ["Drama"] });
+    const setEntries = buildEntries(
+      [show],
+      [
+        watch({ id: "set1", titleKey: "tv:9", seasonNumbers: [1, 2], watchedOn: "2025-01-01" }),
+        watch({ id: "set2", titleKey: "tv:9", seasonNumbers: [1, 2], watchedOn: "2026-02-01" }),
+      ],
+      [rating("set1", "a", 8), rating("set2", "a", 9)],
+    );
+    const rewatches = rewatchStats(setEntries);
+    expect(rewatches.rewatchedTitles).toBe(1);
+    expect(rewatches.comfort[0].name).toBe("Show · S1–S2");
+  });
+
+  it("does not count different season sets as a rewatch", () => {
+    const show = title({ key: "tv:9", name: "Show", type: "tv", genres: ["Drama"] });
+    const setEntries = buildEntries(
+      [show],
+      [
+        watch({ id: "setA", titleKey: "tv:9", seasonNumbers: [1, 2], watchedOn: "2025-01-01" }),
+        watch({ id: "setB", titleKey: "tv:9", seasonNumbers: [2, 3], watchedOn: "2026-02-01" }),
+      ],
+      [rating("setA", "a", 8), rating("setB", "a", 9)],
+    );
+    expect(rewatchStats(setEntries).rewatchedTitles).toBe(0);
+  });
+
+  it("does not claim a genre the person rates below their average", () => {
+    const horror = title({ key: "movie:200", name: "Scary", genres: ["Horror"] });
+    const horrorEntries = buildEntries(
+      [horror],
+      Array.from({ length: 6 }, (_, index) =>
+        watch({ id: `h${index}`, titleKey: "movie:200", watchedOn: `2026-0${index + 1}-01` }),
+      ),
+      Array.from({ length: 6 }, (_, index) => rating(`h${index}`, "a", 2)),
+    );
+    const profile = buildTasteProfile(horrorEntries, "a");
+    expect(topGenreOverlap(profile, horror)).toBeNull();
+  });
+
   it("splits monthly counts into joint and solo", () => {
     const soloWatch = watch({
       id: "d5",
@@ -550,7 +714,7 @@ describe("joint and solo scopes", () => {
     [
       watch({ id: "s1", titleKey: "movie:1", watchers: ["a"] }),
       watch({ id: "s2", titleKey: "movie:2", watchers: ["b"] }),
-      watch({ id: "s3", titleKey: "tv:3", seasonNumber: 1, watchers: ["a", "b"] }),
+      watch({ id: "s3", titleKey: "tv:3", seasonNumbers: [1], watchers: ["a", "b"] }),
     ],
     [rating("s1", "a", 9), rating("s2", "b", 5), rating("s3", "a", 7), rating("s3", "b", 8)],
   );

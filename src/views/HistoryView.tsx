@@ -65,7 +65,12 @@ function WatchDetail({ entry, onClose }: { entry: Entry; onClose: () => void }) 
               <div className="from-surface absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t to-transparent" />
             </div>
           ) : null}
-          <div className={cn("flex items-start gap-3.5 px-4", hasBackdrop ? "-mt-20" : "pt-1")}>
+          <div
+            className={cn(
+              "relative flex items-start gap-3.5 px-4",
+              hasBackdrop ? "-mt-20" : "pt-1",
+            )}
+          >
             <Poster
               title={entry.title}
               className={cn(hasBackdrop && "ring-surface shadow-lg ring-4")}
@@ -178,7 +183,11 @@ export function HistoryView() {
       bucket.push(entry);
       map.set(key, bucket);
     }
-    return [...map.entries()].sort(([a], [b]) => (a === "unknown" ? 1 : b === "unknown" ? -1 : 0));
+    return [...map.entries()].sort(([a], [b]) => {
+      if (a === "unknown") return 1;
+      if (b === "unknown") return -1;
+      return b.localeCompare(a);
+    });
   }, [filtered]);
 
   return (

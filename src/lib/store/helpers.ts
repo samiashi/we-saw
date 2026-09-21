@@ -1,17 +1,7 @@
-import { seedTitleByKey } from "@/lib/seed";
-import type { ListItem, Person, Rating, Title, WeSawData } from "@/lib/types";
-
-export const STORAGE_KEY = "wesaw.data.v1";
-export const LOCAL_A = "p1";
-export const LOCAL_B = "p2";
-
-export const defaultPeople: Person[] = [
-  { id: LOCAL_A, name: "You" },
-  { id: LOCAL_B, name: "Partner" },
-];
+import type { ListItem, Rating, Title, WeSawData } from "@/lib/types";
 
 export function emptyData(): WeSawData {
-  return { people: defaultPeople, titles: {}, watches: [], ratings: [], listItems: [] };
+  return { people: [], titles: {}, watches: [], ratings: [], listItems: [] };
 }
 
 export function reconcileAfterLog(items: ListItem[], title: Title, now: string): ListItem[] {
@@ -29,47 +19,6 @@ export function reconcileAfterLog(items: ListItem[], title: Title, now: string):
   return items.map((entry): ListItem =>
     entry.id === item.id ? { ...entry, status: "watching", updatedAt: now } : entry,
   );
-}
-
-function withSeedPosters(titles: Record<string, Title>): Record<string, Title> {
-  return Object.fromEntries(
-    Object.entries(titles).map(([key, title]) => {
-      if (title?.posterPath) return [key, title];
-      const posterPath = seedTitleByKey(key)?.posterPath;
-      return [key, posterPath ? { ...title, posterPath } : title];
-    }),
-  );
-}
-
-export function loadLocal(): WeSawData {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return emptyData();
-    const parsed = JSON.parse(raw) as Partial<WeSawData>;
-    const people =
-      Array.isArray(parsed.people) && parsed.people.length >= 2
-        ? (parsed.people as Person[])
-        : defaultPeople;
-    const fallbackWatchers = people.map((person) => person.id);
-    const watches = (Array.isArray(parsed.watches) ? parsed.watches : []).map((watch) => ({
-      ...watch,
-      watchers:
-        Array.isArray(watch.watchers) && watch.watchers.length ? watch.watchers : fallbackWatchers,
-    }));
-
-    return {
-      people,
-      titles:
-        parsed.titles && typeof parsed.titles === "object"
-          ? withSeedPosters(parsed.titles as Record<string, Title>)
-          : {},
-      watches,
-      ratings: Array.isArray(parsed.ratings) ? parsed.ratings : [],
-      listItems: Array.isArray(parsed.listItems) ? (parsed.listItems as ListItem[]) : [],
-    };
-  } catch {
-    return emptyData();
-  }
 }
 
 const INVITE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";

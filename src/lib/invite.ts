@@ -7,18 +7,22 @@ export function captureInviteCode(): string | null {
 
   if (fromUrl) {
     const code = fromUrl.trim().toUpperCase();
+    let stored = false;
     try {
       localStorage.setItem(INVITE_KEY, code);
+      stored = true;
     } catch {
       console.warn("Could not remember the invite code.");
     }
-    params.delete(INVITE_PARAM);
-    const query = params.toString();
-    window.history.replaceState(
-      {},
-      document.title,
-      `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
-    );
+    if (stored) {
+      params.delete(INVITE_PARAM);
+      const query = params.toString();
+      window.history.replaceState(
+        {},
+        document.title,
+        `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
+      );
+    }
     return code;
   }
 
@@ -27,10 +31,13 @@ export function captureInviteCode(): string | null {
 
 export function readInviteCode(): string | null {
   try {
-    return localStorage.getItem(INVITE_KEY);
+    const stored = localStorage.getItem(INVITE_KEY);
+    if (stored) return stored;
   } catch {
-    return null;
+    // fall back to the URL below
   }
+  const fromUrl = new URLSearchParams(window.location.search).get(INVITE_PARAM);
+  return fromUrl ? fromUrl.trim().toUpperCase() : null;
 }
 
 export function clearInviteCode() {
