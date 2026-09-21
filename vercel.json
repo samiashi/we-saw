@@ -9,12 +9,16 @@
         { "key": "X-Frame-Options", "value": "DENY" },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'"
+          "value": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'"
         }
       ]
     }
   ],
   "rewrites": [
+    {
+      "source": "/img/:path*",
+      "destination": "https://image.tmdb.org/t/p/:path*"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"

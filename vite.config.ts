@@ -50,10 +50,10 @@ export default defineConfig(({ mode }) => {
           navigateFallback: "/index.html",
           runtimeCaching: [
             {
-              urlPattern: /^https:\/\/image\.tmdb\.org\/.*/i,
+              urlPattern: /\/img\//i,
               handler: "StaleWhileRevalidate",
               options: {
-                cacheName: "tmdb-images-v2",
+                cacheName: "tmdb-images-v3",
                 expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 30 },
               },
             },
@@ -73,6 +73,13 @@ export default defineConfig(({ mode }) => {
     server: {
       host: "127.0.0.1",
       port: 4183,
+      proxy: {
+        "/img": {
+          target: "https://image.tmdb.org/t/p",
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/img/, ""),
+        },
+      },
     },
     test: {
       environment: "node",
@@ -81,6 +88,13 @@ export default defineConfig(({ mode }) => {
     preview: {
       host: "127.0.0.1",
       port: 4183,
+      proxy: {
+        "/img": {
+          target: "https://image.tmdb.org/t/p",
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/img/, ""),
+        },
+      },
     },
     build: {
       rollupOptions: {

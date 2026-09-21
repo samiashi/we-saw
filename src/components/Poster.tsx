@@ -38,7 +38,6 @@ export function Poster({
         alt=""
         loading="lazy"
         decoding="async"
-        crossOrigin="anonymous"
         onError={() => setBrokenUrl(url)}
       />
     );

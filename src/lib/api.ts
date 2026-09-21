@@ -125,22 +125,24 @@ export async function fetchCriticScores(imdbId: string): Promise<CriticScores | 
   }
 }
 
+const IMAGE_BASE = "/img";
+
 export function posterUrl(
   title: Pick<Title, "posterPath">,
   size: "w92" | "w200" | "w342" | "w500" = "w200",
 ): string | null {
-  return title.posterPath ? `https://image.tmdb.org/t/p/${size}${title.posterPath}` : null;
+  return title.posterPath ? `${IMAGE_BASE}/${size}${title.posterPath}` : null;
 }
 
 export function backdropUrl(
   title: Pick<Title, "backdropPath">,
   size: "w780" | "w1280" = "w780",
 ): string | null {
-  return title.backdropPath ? `https://image.tmdb.org/t/p/${size}${title.backdropPath}` : null;
+  return title.backdropPath ? `${IMAGE_BASE}/${size}${title.backdropPath}` : null;
 }
 
 export function providerLogoUrl(logoPath: string | null): string | null {
-  return logoPath ? `https://image.tmdb.org/t/p/w92${logoPath}` : null;
+  return logoPath ? `${IMAGE_BASE}/w92${logoPath}` : null;
 }
 
 export async function fetchProviders(
