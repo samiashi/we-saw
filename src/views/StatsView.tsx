@@ -149,7 +149,6 @@ export function StatsView() {
             missingCount={enrichment.missingCount}
             enriching={enrichment.enriching}
             progress={enrichment.progress}
-            message={enrichment.message}
             onEnrich={() => void enrichment.enrich()}
           />
 

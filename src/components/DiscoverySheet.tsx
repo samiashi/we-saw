@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { fallbackTitle, fetchTitleDetails } from "@/lib/api";
 import { buildTasteProfile, predictScore } from "@/lib/analytics";
 import { useStore } from "@/lib/store";
+import { useToast } from "@/hooks/useToast";
 import type { Title, TitleSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Backdrop } from "@/components/Backdrop";
@@ -21,9 +22,9 @@ export function DiscoverySheet({
   onLog: (summary: TitleSummary) => void;
 }) {
   const { entries, people, nameFor, addToList } = useStore();
+  const toast = useToast();
   const [title, setTitle] = useState<Title | null>(null);
   const [loading, setLoading] = useState(true);
-  const [flash, setFlash] = useState("");
 
   const profiles = useMemo(
     () => people.map((person) => buildTasteProfile(entries, person.id)),
@@ -61,8 +62,7 @@ export function DiscoverySheet({
   async function handleAdd() {
     if (!title) return;
     const added = await addToList(title);
-    setFlash(added ? "Added to Up Next" : "Already on the list");
-    setTimeout(() => setFlash(""), 2500);
+    toast.show(added ? `Added ${title.name} to Up Next` : `${title.name} is already on the list`);
   }
 
   return (
@@ -138,12 +138,6 @@ export function DiscoverySheet({
 
             {title.overview ? (
               <p className="text-ink/85 text-sm leading-relaxed">{title.overview}</p>
-            ) : null}
-
-            {flash ? (
-              <span role="status" className="text-good text-[13px]">
-                {flash}
-              </span>
             ) : null}
 
             <div className="flex flex-wrap gap-2">

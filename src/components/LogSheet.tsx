@@ -97,7 +97,7 @@ export function LogSheet({
   async function save() {
     if (!title || !canSave) return;
     setSaving(true);
-    await logWatch({
+    const saved = await logWatch({
       title,
       seasonNumber: title.type === "tv" ? seasonNumber : null,
       watchedOn: date || localDateString(),
@@ -107,7 +107,7 @@ export function LogSheet({
       scores: editable.map((person) => ({ userId: person.id, score: scores[person.id] })),
     });
     setSaving(false);
-    onSaved(title);
+    if (saved) onSaved(title);
   }
 
   const chosen = Object.values(scores);

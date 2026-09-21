@@ -2,7 +2,9 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { useToast } from "@/hooks/useToast";
 import { catalogHealth, type CatalogHealth } from "@/lib/api";
+import { copyText } from "@/lib/clipboard";
 import { localDateString } from "@/lib/dates";
 import { getRegion, REGIONS, setRegion } from "@/lib/region";
 import { useStore } from "@/lib/store";
@@ -64,7 +66,7 @@ export function SettingsView() {
   const [health, setHealth] = useState<CatalogHealth | null | "loading">("loading");
   const [nameDrafts, setNameDrafts] = useState<Record<string, string>>({});
   const [householdDraft, setHouseholdDraft] = useState<string | null>(null);
-  const [dataMessage, setDataMessage] = useState("");
+  const toast = useToast();
   const [theme, setThemeState] = useState<ThemeName>(() => getTheme());
   const [region, setRegionState] = useState(getRegion);
   const activeInvite = invites.find((invite) => !invite.consumedAt) ?? null;
@@ -98,18 +100,34 @@ export function SettingsView() {
     if (draft.trim() && draft !== fallback) await renamePerson(personId, draft);
   }
 
-  function copyCode(code: string) {
-    navigator.clipboard
-      .writeText(code)
-      .then(() => setDataMessage("Invite code copied."))
-      .catch(() => setDataMessage("Copy failed — select the code manually."));
+  async function copyCode(code: string) {
+    const copied = await copyText(code);
+    toast.show(copied ? "Invite code copied." : "Copy failed — select the code manually.");
   }
 
-  function copyInviteLink(code: string) {
-    navigator.clipboard
-      .writeText(`${window.location.origin}/?invite=${code}`)
-      .then(() => setDataMessage("Invite link copied."))
-      .catch(() => setDataMessage("Copy failed — share the code manually."));
+  async function copyInviteLink(code: string) {
+    const copied = await copyText(`${window.location.origin}/?invite=${code}`);
+    toast.show(copied ? "Invite link copied." : "Copy failed — share the code manually.");
+  }
+
+  async function handleCreateInvite() {
+    const code = await createInvite();
+    if (code) toast.show("Invite code ready.");
+  }
+
+  async function handleCreateAppInvite() {
+    const code = await createAppInvite();
+    if (code) toast.show("Friend invite ready.");
+  }
+
+  async function handleRevokeInvite(code: string) {
+    const revoked = await revokeInvite(code);
+    if (revoked) toast.show("Invite revoked.");
+  }
+
+  async function handleRevokeAppInvite(code: string) {
+    const revoked = await revokeAppInvite(code);
+    if (revoked) toast.show("Friend invite revoked.");
   }
 
   function download() {
@@ -120,19 +138,20 @@ export function SettingsView() {
     anchor.download = `we-saw-${localDateString()}.json`;
     anchor.click();
     URL.revokeObjectURL(url);
+    toast.show("Exported your log.");
   }
 
   async function handleImport(file: File | undefined) {
     if (!file) return;
     const text = await file.text();
     const ok = importData(text);
-    setDataMessage(ok ? "Imported." : "That file could not be imported.");
+    toast.show(ok ? "Imported your log." : "That file could not be imported.");
   }
 
   function handleClear() {
     if (!window.confirm("Delete every logged watch on this device?")) return;
     clearAll();
-    setDataMessage("Cleared.");
+    toast.show("Cleared your log.");
   }
 
   const missingKeys = health !== "loading" && health !== null && (!health.tmdb || !health.omdb);
@@ -197,11 +216,13 @@ export function SettingsView() {
                 {activeInvite.code}
               </code>
               <div className="flex flex-wrap gap-2">
-                <Button onClick={() => copyInviteLink(activeInvite.code)}>Copy invite link</Button>
-                <Button variant="ghost" onClick={() => copyCode(activeInvite.code)}>
+                <Button onClick={() => void copyInviteLink(activeInvite.code)}>
+                  Copy invite link
+                </Button>
+                <Button variant="ghost" onClick={() => void copyCode(activeInvite.code)}>
                   Copy code
                 </Button>
-                <Button variant="danger" onClick={() => void revokeInvite(activeInvite.code)}>
+                <Button variant="danger" onClick={() => void handleRevokeInvite(activeInvite.code)}>
                   Revoke
                 </Button>
               </div>
@@ -212,7 +233,7 @@ export function SettingsView() {
                 No active invite. Generate a one-use code for your partner.
               </p>
               <div className="flex flex-wrap gap-2">
-                <Button onClick={() => void createInvite()}>Generate invite code</Button>
+                <Button onClick={() => void handleCreateInvite()}>Generate invite code</Button>
               </div>
             </>
           )}
@@ -231,17 +252,20 @@ export function SettingsView() {
                 {activeAppInvite.code}
               </code>
               <div className="flex flex-wrap gap-2">
-                <Button variant="ghost" onClick={() => copyCode(activeAppInvite.code)}>
+                <Button variant="ghost" onClick={() => void copyCode(activeAppInvite.code)}>
                   Copy code
                 </Button>
-                <Button variant="danger" onClick={() => void revokeAppInvite(activeAppInvite.code)}>
+                <Button
+                  variant="danger"
+                  onClick={() => void handleRevokeAppInvite(activeAppInvite.code)}
+                >
                   Revoke
                 </Button>
               </div>
             </>
           ) : (
             <div className="flex flex-wrap gap-2">
-              <Button onClick={() => void createAppInvite()}>Generate friend invite</Button>
+              <Button onClick={() => void handleCreateAppInvite()}>Generate friend invite</Button>
             </div>
           )}
         </Section>
@@ -364,7 +388,6 @@ export function SettingsView() {
             </>
           ) : null}
         </div>
-        {dataMessage ? <p className="text-muted text-[13px]">{dataMessage}</p> : null}
       </Section>
 
       <Section title="About">

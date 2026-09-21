@@ -10,6 +10,7 @@ import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { WhereToWatch } from "@/components/WhereToWatch";
 import { seasonLabel } from "@/lib/analytics";
 import { useStore } from "@/lib/store";
+import { useToast } from "@/hooks/useToast";
 import type { Entry } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,7 @@ function groupLabel(monthKey: string): string {
 
 function WatchDetail({ entry, onClose }: { entry: Entry; onClose: () => void }) {
   const { people, nameFor, canEditScore, setRating, removeWatch } = useStore();
+  const toast = useToast();
   const label = seasonLabel(entry);
   const critic = entry.title.critic;
   const watchers = entry.watch.watchers;
@@ -30,8 +32,9 @@ function WatchDetail({ entry, onClose }: { entry: Entry; onClose: () => void }) 
   async function handleDelete() {
     if (!window.confirm(`Delete this watch of ${entry.title.name}${label ? ` ${label}` : ""}?`))
       return;
-    await removeWatch(entry.watch.id);
+    const removed = await removeWatch(entry.watch.id);
     onClose();
+    if (removed) toast.show(`Deleted ${entry.title.name}${label ? ` ${label}` : ""}`);
   }
 
   return (

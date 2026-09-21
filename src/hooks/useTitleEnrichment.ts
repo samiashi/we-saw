@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { fetchTitleDetails, titleToSummary } from "@/lib/api";
 import { useStore } from "@/lib/store";
+import { useToast } from "@/hooks/useToast";
 
 export function useTitleEnrichment() {
   const { titles, patchTitle } = useStore();
+  const toast = useToast();
   const [enriching, setEnriching] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [message, setMessage] = useState("");
 
   const missingCount = Object.values(titles).filter(
     (title) => title.tmdbId && !title.originalLanguage,
@@ -19,7 +20,6 @@ export function useTitleEnrichment() {
     if (!missing.length) return;
 
     setEnriching(true);
-    setMessage("");
     setProgress(0);
 
     let done = 0;
@@ -42,8 +42,8 @@ export function useTitleEnrichment() {
     }
 
     setEnriching(false);
-    setMessage(done ? `Updated ${done} titles.` : "No metadata available — check your TMDB key.");
+    toast.show(done ? `Updated ${done} titles.` : "No metadata available — check your TMDB key.");
   }
 
-  return { missingCount, enriching, progress, message, enrich };
+  return { missingCount, enriching, progress, enrich };
 }

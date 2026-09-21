@@ -20,7 +20,6 @@ export function TasteDepthSection({
   missingCount,
   enriching,
   progress,
-  message,
   onEnrich,
 }: {
   languages: { rows: LanguageStat[]; unknown: number; foreignShare: number | null };
@@ -30,7 +29,6 @@ export function TasteDepthSection({
   missingCount: number;
   enriching: boolean;
   progress: number;
-  message: string;
   onEnrich: () => void;
 }) {
   return (
@@ -45,7 +43,6 @@ export function TasteDepthSection({
           </Button>
         ) : null}
       </div>
-      {message ? <p className="text-muted text-[13px]">{message}</p> : null}
       <div className="grid gap-2.5 sm:grid-cols-2">
         <div className="border-line bg-surface flex flex-col gap-2 rounded-2xl border p-3.5">
           <span className="text-muted text-xs tracking-[0.07em] uppercase">Where it's from</span>

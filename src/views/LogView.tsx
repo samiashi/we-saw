@@ -9,6 +9,7 @@ import {
 } from "@/lib/api";
 import { buildTasteProfile, safeSummaryScore } from "@/lib/analytics";
 import { useStore } from "@/lib/store";
+import { useToast } from "@/hooks/useToast";
 import type { Title, TitleSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { DiscoveryRow } from "@/components/DiscoveryRow";
@@ -22,13 +23,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function LogView() {
   const { entries, addToList, people } = useStore();
+  const toast = useToast();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<TitleSummary[]>([]);
   const [source, setSource] = useState<"tmdb" | "local" | null>(null);
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<TitleSummary | null>(null);
-  const [flash, setFlash] = useState("");
-  const [listFlash, setListFlash] = useState("");
   const [trending, setTrending] = useState<TitleSummary[] | null>(null);
   const [similar, setSimilar] = useState<{ seed: Title; items: TitleSummary[] } | null>(null);
   const [discovery, setDiscovery] = useState<TitleSummary | null>(null);
@@ -114,17 +114,15 @@ export function LogView() {
     setQuery("");
     setResults([]);
     setSource(null);
-    setFlash(`Logged ${title.name}`);
-    setTimeout(() => setFlash(""), 2500);
+    toast.show(`Logged ${title.name}`);
   }
 
   async function quickAdd(summary: TitleSummary) {
     const details = (await fetchTitleDetails(summary)) ?? fallbackTitle(summary);
     const added = await addToList(details);
-    setListFlash(
+    toast.show(
       added ? `Added ${details.name} to Up Next` : `${details.name} is already on the list`,
     );
-    setTimeout(() => setListFlash(""), 2500);
   }
 
   function handleDiscoveryLog(summary: TitleSummary) {
@@ -156,12 +154,6 @@ export function LogView() {
         <p className="text-muted text-[13px]">
           Showing the offline starter catalog — add a TMDB key for full search.
         </p>
-      ) : null}
-
-      {listFlash ? (
-        <span role="status" className="text-good text-[13px]">
-          {listFlash}
-        </span>
       ) : null}
 
       {showResults && searching ? <p className="text-muted text-[13px]">Searching…</p> : null}
@@ -250,14 +242,7 @@ export function LogView() {
       ) : null}
 
       <section className="flex flex-col gap-2.5">
-        <div className="flex items-baseline justify-between gap-2">
-          <h2 className="text-[17px] font-semibold">Recent watches</h2>
-          {flash ? (
-            <span role="status" className="text-good text-[13px]">
-              {flash}
-            </span>
-          ) : null}
-        </div>
+        <h2 className="text-[17px] font-semibold">Recent watches</h2>
         {recent.length ? (
           <div className="grid auto-rows-fr gap-2">
             {recent.map((entry) => (

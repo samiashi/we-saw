@@ -24,6 +24,8 @@ import {
   yearEntries,
 } from "@/lib/analytics";
 import { useStore } from "@/lib/store";
+import { useToast } from "@/hooks/useToast";
+import { copyText } from "@/lib/clipboard";
 import { posterUrl } from "@/lib/api";
 import { renderRecapImage } from "@/lib/recapImage";
 
@@ -37,7 +39,7 @@ const TOOLTIP_STYLE = {
 
 export function ReviewView({ year, onClose }: { year: string; onClose: () => void }) {
   const { entries, people, nameFor } = useStore();
-  const [message, setMessage] = useState("");
+  const toast = useToast();
   const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
@@ -107,12 +109,9 @@ export function ReviewView({ year, onClose }: { year: string; onClose: () => voi
     return lines.join("\n");
   }
 
-  function copyRecap() {
-    navigator.clipboard
-      .writeText(recapText())
-      .then(() => setMessage("Recap copied."))
-      .catch(() => setMessage("Copy failed — select manually."));
-    setTimeout(() => setMessage(""), 3000);
+  async function copyRecap() {
+    const copied = await copyText(recapText());
+    toast.show(copied ? "Recap copied." : "Copy failed — select manually.");
   }
 
   async function shareImage() {
@@ -138,7 +137,7 @@ export function ReviewView({ year, onClose }: { year: string; onClose: () => voi
     setSharing(false);
 
     if (!blob) {
-      setMessage("Could not build the image.");
+      toast.show("Could not build the image.");
       return;
     }
 
@@ -149,7 +148,7 @@ export function ReviewView({ year, onClose }: { year: string; onClose: () => voi
       try {
         await navigator.share(shareData);
       } catch {
-        setMessage("Share cancelled.");
+        toast.show("Share cancelled.");
       }
       return;
     }
@@ -160,7 +159,7 @@ export function ReviewView({ year, onClose }: { year: string; onClose: () => voi
     anchor.download = `we-saw-${year}.png`;
     anchor.click();
     URL.revokeObjectURL(url);
-    setMessage("Image saved.");
+    toast.show("Image saved.");
   }
 
   return (
@@ -177,12 +176,6 @@ export function ReviewView({ year, onClose }: { year: string; onClose: () => voi
         <h1 className="text-accent text-[44px] leading-none font-bold tracking-tight">{year}</h1>
         <p className="text-muted text-sm">The year in review.</p>
       </header>
-
-      {message ? (
-        <span role="status" className="text-good text-[13px]">
-          {message}
-        </span>
-      ) : null}
 
       {!yearList.length ? (
         <p className="text-muted text-[13px]">Nothing logged in {year} yet.</p>

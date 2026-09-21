@@ -13,6 +13,7 @@ import {
 } from "@/lib/analytics";
 import { fetchAirdates, titleToSummary } from "@/lib/api";
 import { useStore } from "@/lib/store";
+import { useToast } from "@/hooks/useToast";
 import type { ListItem, ListStatus, NextEpisode, Title, TitleSummary } from "@/lib/types";
 
 const statusLabels: Record<Exclude<ListStatus, "done">, string> = {
@@ -67,6 +68,12 @@ function ListRow({
   onLog: (summary: TitleSummary) => void;
 }) {
   const { setListStatus, removeFromList, nameFor } = useStore();
+  const toast = useToast();
+
+  async function handleRemove() {
+    const removed = await removeFromList(item.id);
+    if (removed) toast.show(`Removed ${title.name} from Up Next`);
+  }
 
   return (
     <div className="border-line bg-surface flex h-full items-start gap-3 rounded-2xl border p-3">
@@ -104,7 +111,7 @@ function ListRow({
           <Chip onClick={() => onLog(titleToSummary(title))}>
             <Play size={12} /> Log watch
           </Chip>
-          <Chip onClick={() => void removeFromList(item.id)}>Remove</Chip>
+          <Chip onClick={() => void handleRemove()}>Remove</Chip>
         </div>
       </div>
     </div>
@@ -113,8 +120,8 @@ function ListRow({
 
 export function UpNextView() {
   const { listItems, titles, entries, people, nameFor } = useStore();
+  const toast = useToast();
   const [selected, setSelected] = useState<TitleSummary | null>(null);
-  const [flash, setFlash] = useState("");
   const [air, setAir] = useState<Record<string, NextEpisode | null>>({});
 
   const resolved = useMemo(
@@ -197,12 +204,6 @@ export function UpNextView() {
         <p className="text-muted mt-1 text-sm">What's lined up, in progress, or abandoned.</p>
       </header>
 
-      {flash ? (
-        <span role="status" className="text-good text-[13px]">
-          {flash}
-        </span>
-      ) : null}
-
       {tonight ? (
         <section className="border-accent/35 bg-surface flex flex-col gap-3 rounded-2xl border p-4">
           <div className="flex items-baseline justify-between gap-2">
@@ -260,8 +261,7 @@ export function UpNextView() {
           onClose={() => setSelected(null)}
           onSaved={(title) => {
             setSelected(null);
-            setFlash(`Logged ${title.name}`);
-            setTimeout(() => setFlash(""), 2500);
+            toast.show(`Logged ${title.name}`);
           }}
         />
       ) : null}
