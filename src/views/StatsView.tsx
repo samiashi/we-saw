@@ -1,6 +1,5 @@
 import { lazy, Suspense, useMemo, useState } from "react";
 import { BarList } from "@/components/BarList";
-import { ScoreChip } from "@/components/ScoreChip";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ActivitySection } from "@/components/stats/ActivitySection";
@@ -186,12 +185,6 @@ export function StatsView() {
             : `No solo watches logged for ${nameFor(scopeId)} yet.`}
         </p>
       )}
-
-      <div className="flex flex-wrap gap-2 pt-1 pb-2">
-        <ScoreChip score={9} label="Loved" />
-        <ScoreChip score={6} label="Fine" />
-        <ScoreChip score={3} label="Nope" />
-      </div>
 
       {drillGenre ? (
         <DrillDrawer
