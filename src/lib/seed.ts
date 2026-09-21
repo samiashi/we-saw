@@ -1,5 +1,33 @@
 import type { SeasonInfo, Title, TitleSummary } from "@/lib/types";
 
+const SEED_POSTERS: Record<string, string> = {
+  "movie:27205": "/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg",
+  "movie:155": "/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
+  "movie:496243": "/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg",
+  "movie:545611": "/u68AjlvlutfEIcpmbYpKcdi09ut.jpg",
+  "movie:693134": "/6izwz7rsy95ARzTR3poZ8H6c5pp.jpg",
+  "movie:872585": "/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",
+  "movie:120467": "/eWdyYQreja6JGCzqHWXpWHDrrPo.jpg",
+  "movie:419430": "/tFXcEccSQMf3lfhfXKSU9iRBpa3.jpg",
+  "movie:76341": "/ulcAi4dKpAjHwYGS08vNyx9H6I9.jpg",
+  "movie:313369": "/uDO8zWDhfWwoFdKS4fzkUJt0Rf0.jpg",
+  "movie:546554": "/pThyQovXQrw2m0s9x82twj48Jq4.jpg",
+  "movie:129": "/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg",
+  "movie:603": "/dXNAPwY7VrqMAo51EKhhCJfaGb5.jpg",
+  "movie:680": "/vQWk5YBFWF4bZaofAbv0tShwBvQ.jpg",
+  "movie:244786": "/7fn624j5lj3xTme2SgiLCeuedmO.jpg",
+  "tv:1396": "/anFx9aTOOYqgS3v7x3R84Kz67ly.jpg",
+  "tv:136315": "/eKfVzzEazSIjJMrw9ADa2x8ksLz.jpg",
+  "tv:95396": "/pPHpeI2X1qEd1CS1SeyrdhZ4qnT.jpg",
+  "tv:76331": "/z0XiwdrCQ9yVIr4O0pxzaAYRxdW.jpg",
+  "tv:100088": "/dmo6TYuuJgaYinXBPjrgG9mB5od.jpg",
+  "tv:66732": "/uOOtwVbSr4QDjAGIifLDwpb2Pdl.jpg",
+  "tv:67070": "/vFn0nLPcIggPH5LTWWaJ2hcsGlc.jpg",
+  "tv:87108": "/hlLXt2tOPT6RRnjiUmoxyG1LTFi.jpg",
+  "tv:111837": "/lw4n5CBlLR62nogy46FyJaIFziH.jpg",
+  "tv:97546": "/uRHsiw1wLxPHFXkkv4Ix1s0O6f4.jpg",
+};
+
 function makeTitle(
   key: string,
   tmdbId: number,
@@ -20,7 +48,7 @@ function makeTitle(
     type,
     name,
     year,
-    posterPath: null,
+    posterPath: SEED_POSTERS[key] ?? null,
     overview: "",
     genres,
     directors,

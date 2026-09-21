@@ -1,58 +1,54 @@
 const REGION_KEY = "wesaw.region";
+const DEFAULT_REGION = "AE";
 
 export const REGIONS: { code: string; name: string }[] = [
-  { code: "AE", name: "United Arab Emirates" },
-  { code: "SA", name: "Saudi Arabia" },
-  { code: "QA", name: "Qatar" },
-  { code: "KW", name: "Kuwait" },
+  { code: "AR", name: "Argentina" },
+  { code: "AU", name: "Australia" },
   { code: "BH", name: "Bahrain" },
-  { code: "OM", name: "Oman" },
-  { code: "JO", name: "Jordan" },
-  { code: "LB", name: "Lebanon" },
-  { code: "EG", name: "Egypt" },
-  { code: "MA", name: "Morocco" },
-  { code: "ZA", name: "South Africa" },
-  { code: "NG", name: "Nigeria" },
-  { code: "KE", name: "Kenya" },
-  { code: "US", name: "United States" },
+  { code: "BD", name: "Bangladesh" },
+  { code: "BR", name: "Brazil" },
   { code: "CA", name: "Canada" },
-  { code: "GB", name: "United Kingdom" },
-  { code: "IE", name: "Ireland" },
+  { code: "DK", name: "Denmark" },
+  { code: "EG", name: "Egypt" },
   { code: "FR", name: "France" },
   { code: "DE", name: "Germany" },
-  { code: "ES", name: "Spain" },
-  { code: "IT", name: "Italy" },
-  { code: "PT", name: "Portugal" },
-  { code: "NL", name: "Netherlands" },
-  { code: "SE", name: "Sweden" },
-  { code: "NO", name: "Norway" },
-  { code: "DK", name: "Denmark" },
-  { code: "PL", name: "Poland" },
-  { code: "TR", name: "Türkiye" },
   { code: "IN", name: "India" },
-  { code: "PK", name: "Pakistan" },
-  { code: "BD", name: "Bangladesh" },
-  { code: "LK", name: "Sri Lanka" },
-  { code: "SG", name: "Singapore" },
-  { code: "MY", name: "Malaysia" },
   { code: "ID", name: "Indonesia" },
-  { code: "PH", name: "Philippines" },
-  { code: "AU", name: "Australia" },
-  { code: "NZ", name: "New Zealand" },
+  { code: "IE", name: "Ireland" },
+  { code: "IT", name: "Italy" },
   { code: "JP", name: "Japan" },
-  { code: "KR", name: "South Korea" },
-  { code: "BR", name: "Brazil" },
+  { code: "JO", name: "Jordan" },
+  { code: "KE", name: "Kenya" },
+  { code: "KW", name: "Kuwait" },
+  { code: "LB", name: "Lebanon" },
+  { code: "MY", name: "Malaysia" },
   { code: "MX", name: "Mexico" },
-  { code: "AR", name: "Argentina" },
+  { code: "MA", name: "Morocco" },
+  { code: "NL", name: "Netherlands" },
+  { code: "NZ", name: "New Zealand" },
+  { code: "NG", name: "Nigeria" },
+  { code: "NO", name: "Norway" },
+  { code: "OM", name: "Oman" },
+  { code: "PK", name: "Pakistan" },
+  { code: "PH", name: "Philippines" },
+  { code: "PL", name: "Poland" },
+  { code: "PT", name: "Portugal" },
+  { code: "QA", name: "Qatar" },
+  { code: "SA", name: "Saudi Arabia" },
+  { code: "SG", name: "Singapore" },
+  { code: "ZA", name: "South Africa" },
+  { code: "KR", name: "South Korea" },
+  { code: "ES", name: "Spain" },
+  { code: "LK", name: "Sri Lanka" },
+  { code: "SE", name: "Sweden" },
+  { code: "TR", name: "Türkiye" },
+  { code: "AE", name: "United Arab Emirates" },
+  { code: "GB", name: "United Kingdom" },
+  { code: "US", name: "United States" },
 ];
 
 export function regionName(code: string): string {
   return REGIONS.find((region) => region.code === code)?.name ?? code;
-}
-
-function detectRegion(): string {
-  const match = navigator.language?.toUpperCase().match(/-([A-Z]{2})$/);
-  return match ? match[1] : "US";
 }
 
 export function getRegion(): string {
@@ -62,7 +58,7 @@ export function getRegion(): string {
   } catch {
     console.warn("Could not read the region preference.");
   }
-  return detectRegion();
+  return DEFAULT_REGION;
 }
 
 export function hasRegionChoice(): boolean {

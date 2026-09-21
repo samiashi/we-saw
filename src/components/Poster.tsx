@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { posterUrl } from "@/lib/api";
 import type { Title } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,7 @@ export function Poster({
   variant?: "regular" | "small";
   className?: string;
 }) {
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
   const url = posterUrl(title, variant === "small" ? "w92" : size);
   const base = cn(
     "aspect-[2/3] shrink-0 rounded-lg object-cover",
@@ -28,7 +30,18 @@ export function Poster({
     className,
   );
 
-  if (url) return <img className={base} src={url} alt="" loading="lazy" decoding="async" />;
+  if (url && url !== brokenUrl) {
+    return (
+      <img
+        className={base}
+        src={url}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        onError={() => setBrokenUrl(url)}
+      />
+    );
+  }
   return (
     <div
       className={cn(

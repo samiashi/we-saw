@@ -1,3 +1,4 @@
+import { seedTitleByKey } from "@/lib/seed";
 import type { ListItem, Person, Rating, Title, WeSawData } from "@/lib/types";
 
 export const STORAGE_KEY = "wesaw.data.v1";
@@ -30,6 +31,16 @@ export function reconcileAfterLog(items: ListItem[], title: Title, now: string):
   );
 }
 
+function withSeedPosters(titles: Record<string, Title>): Record<string, Title> {
+  return Object.fromEntries(
+    Object.entries(titles).map(([key, title]) => {
+      if (title?.posterPath) return [key, title];
+      const posterPath = seedTitleByKey(key)?.posterPath;
+      return [key, posterPath ? { ...title, posterPath } : title];
+    }),
+  );
+}
+
 export function loadLocal(): WeSawData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -50,7 +61,7 @@ export function loadLocal(): WeSawData {
       people,
       titles:
         parsed.titles && typeof parsed.titles === "object"
-          ? (parsed.titles as Record<string, Title>)
+          ? withSeedPosters(parsed.titles as Record<string, Title>)
           : {},
       watches,
       ratings: Array.isArray(parsed.ratings) ? parsed.ratings : [],

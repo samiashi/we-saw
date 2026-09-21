@@ -20,6 +20,9 @@ export function Backdrop({
       loading="lazy"
       decoding="async"
       aria-hidden="true"
+      onError={(event) => {
+        event.currentTarget.hidden = true;
+      }}
     />
   );
 }
