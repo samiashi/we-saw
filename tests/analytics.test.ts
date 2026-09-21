@@ -29,6 +29,7 @@ import {
   ratingDistribution,
   rewatchStats,
   scoreStats,
+  seasonLabel,
   soloEntries,
   totalMinutes,
   watchMinutes,
@@ -180,6 +181,26 @@ describe("watch time", () => {
   it("multiplies season runtime by episode count", () => {
     const w3 = entries.find((entry) => entry.watch.id === "w3");
     expect(w3 && watchMinutes(w3)).toBe(300);
+  });
+
+  it("counts every listed season when the whole show is logged", () => {
+    const wholeShow = buildEntries(
+      [
+        {
+          ...titles[2],
+          seasons: [
+            { seasonNumber: 1, name: "Season 1", episodeCount: 10, year: "2005" },
+            { seasonNumber: 2, name: "Season 2", episodeCount: 12, year: "2006" },
+          ],
+        },
+      ],
+      [watch({ id: "whole", titleKey: "tv:3", seasonNumber: null, watchedOn: "2024-07-01" })],
+      [rating("whole", "a", 8)],
+    );
+
+    expect(wholeShow[0] && watchMinutes(wholeShow[0])).toBe(30 * 22);
+    expect(seasonLabel(wholeShow[0])).toBe("All seasons");
+    expect(seasonLabel(entries.find((entry) => entry.watch.id === "w3")!)).toBe("S1");
   });
 
   it("totals across entries and formats", () => {

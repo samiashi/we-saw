@@ -264,6 +264,10 @@ export function watchMinutes(entry: Entry): number | null {
   const { title, watch } = entry;
   if (title.type === "movie") return title.runtimeMinutes;
   if (title.runtimeMinutes == null) return null;
+  if (watch.seasonNumber == null) {
+    const episodes = title.seasons.reduce((sum, season) => sum + season.episodeCount, 0);
+    return episodes > 0 ? title.runtimeMinutes * episodes : title.runtimeMinutes;
+  }
   const season = title.seasons.find((item) => item.seasonNumber === watch.seasonNumber);
   if (!season) return title.runtimeMinutes;
   return title.runtimeMinutes * season.episodeCount;
@@ -921,7 +925,8 @@ export function buildInsights(entries: Entry[], people: Person[], now = new Date
 }
 
 export function seasonLabel(entry: Pick<Entry, "watch" | "title">): string {
-  if (entry.title.type === "movie" || entry.watch.seasonNumber == null) return "";
+  if (entry.title.type !== "tv") return "";
+  if (entry.watch.seasonNumber == null) return "All seasons";
   return `S${entry.watch.seasonNumber}`;
 }
 

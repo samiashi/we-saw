@@ -48,7 +48,6 @@ export function LogSheet({
       }
       if (!active) return;
       setTitle(details);
-      if (details.type === "tv") setSeasonNumber(details.seasons[0]?.seasonNumber ?? 1);
       setLoading(false);
     })();
 
@@ -82,18 +81,18 @@ export function LogSheet({
 
   const season = title?.seasons.find((item) => item.seasonNumber === seasonNumber) ?? null;
   const recentTvWatches = entries.filter((entry) => entry.title.type === "tv").length;
+  const episodeCount =
+    seasonNumber == null
+      ? (title?.seasons.reduce((sum, item) => sum + item.episodeCount, 0) ?? 0)
+      : (season?.episodeCount ?? 0);
   const seasonEstimate =
-    title?.type === "tv" && title.runtimeMinutes != null && season
-      ? title.runtimeMinutes * season.episodeCount
+    title?.type === "tv" && title.runtimeMinutes != null && episodeCount > 0
+      ? title.runtimeMinutes * episodeCount
       : title?.type === "tv"
         ? title?.runtimeMinutes
         : null;
   const canSave =
-    !loading &&
-    !saving &&
-    Boolean(title) &&
-    editable.every((person) => scores[person.id] != null) &&
-    (title?.type === "movie" || seasonNumber != null);
+    !loading && !saving && Boolean(title) && editable.every((person) => scores[person.id] != null);
 
   async function save() {
     if (!title || !canSave) return;
@@ -203,9 +202,14 @@ export function LogSheet({
                 {title.seasons.length ? (
                   <Select
                     id="season-select"
-                    value={seasonNumber ?? ""}
-                    onChange={(event) => setSeasonNumber(Number(event.target.value))}
+                    value={seasonNumber ?? "all"}
+                    onChange={(event) =>
+                      setSeasonNumber(
+                        event.target.value === "all" ? null : Number(event.target.value),
+                      )
+                    }
                   >
+                    <option value="all">Whole show</option>
                     {title.seasons.map((item) => (
                       <option key={item.seasonNumber} value={item.seasonNumber}>
                         {item.name} · {item.episodeCount} episodes
@@ -214,23 +218,19 @@ export function LogSheet({
                     ))}
                   </Select>
                 ) : (
-                  <Input
-                    type="number"
-                    min={1}
-                    value={seasonNumber ?? 1}
-                    onChange={(event) =>
-                      setSeasonNumber(Math.max(1, Number(event.target.value) || 1))
-                    }
-                  />
+                  <p className="text-muted text-[13px]">
+                    No season list for this show — logging the whole show.
+                  </p>
                 )}
                 {seasonEstimate ? (
                   <p className="text-muted text-[13px]">
                     About {formatMinutes(seasonEstimate)} of watching
+                    {seasonNumber == null && title.seasons.length ? " for the whole show" : ""}
                   </p>
                 ) : null}
                 {recentTvWatches < 3 ? (
                   <p className="text-muted text-[12.5px]">
-                    Each season gets its own rating, so you can see how a show changes over time.
+                    Each season gets its own rating, or keep the whole show as one.
                   </p>
                 ) : null}
               </div>
