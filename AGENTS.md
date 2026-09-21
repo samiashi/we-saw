@@ -152,9 +152,10 @@ Local mode mirrors the same shape in `localStorage` key `wesaw.data.v1` (see `We
 (never edit an applied migration), plus the matching load/map code in `src/lib/store.tsx`. New
 user-data tables must ship `household_id` and household-scoped policies in the same migration.
 
-The database has never been created, so `20260921000000_initial_schema.sql` is still the only
-migration and may be squashed or edited freely. Once it has been applied anywhere, treat it as
-append-only — add a new timestamped file for every change.
+Migrations are applied to the linked Supabase project (the initial schema, `restrict_anon_execute`
+and `fix_tenant_scoping`). They are append-only — add a new timestamped file for every change, never
+edit one that has been applied. Use `supabase db push` for remote changes and keep `supabase/.temp`
+untracked.
 
 ## Analytics and the taste engine
 
@@ -241,8 +242,9 @@ components plus `useStatsData`/`useTitleEnrichment`, store split into `store/hel
 
 Not yet done, in rough priority order:
 
-1. First commit + push to `samiashi/we-saw`, and set the three migration secrets (repo was only
-   `git init`-ed; nothing committed yet).
+1. Set the three migration-workflow secrets (`SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`,
+   `SUPABASE_PROJECT_REF`); the repo is pushed and the migrations are already applied to the linked
+   project.
 2. Import history from Trakt / Letterboxd / TV Time so stats start full.
 3. Push nudges ("rate last night's movie", new episodes) on top of the service worker.
 4. Backups: scheduled `supabase db dump` workflow + restore docs (free tier has no PITR; projects
