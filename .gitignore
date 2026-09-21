@@ -4,5 +4,6 @@ dist
 .env
 .vercel
 .supabase
+supabase/.temp
 .DS_Store
 *.tsbuildinfo
