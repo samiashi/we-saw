@@ -569,6 +569,17 @@ describe("picks, duels and taste depth", () => {
     expect(picks.rows.find((row) => row.personId === "a")?.avg).not.toBeNull();
   });
 
+  it("counts together picks separately from a person's picks", () => {
+    const together = depthEntries.map((entry) => ({
+      ...entry,
+      watch: { ...entry.watch, pickedBy: null, pickedTogether: true },
+    }));
+    const picks = pickStats(together, people);
+    expect(picks.together).toBe(4);
+    expect(picks.unassigned).toBe(0);
+    expect(picks.rows.every((row) => row.count === 0)).toBe(true);
+  });
+
   it("measures per-genre gaps between two people", () => {
     const duels = genreGapStats(depthEntries, "a", "b", 8);
     const drama = duels.find((row) => row.name === "Drama");

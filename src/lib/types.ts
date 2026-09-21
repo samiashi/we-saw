@@ -63,6 +63,8 @@ export interface Watch {
   note: string;
   watchers: string[];
   pickedBy?: string | null;
+  /** True when the pair picked it together; pickedBy stays null then. */
+  pickedTogether?: boolean;
   createdBy: string | null;
   createdAt: string;
 }
@@ -87,6 +89,7 @@ export interface LogInput {
   note: string;
   watchers: string[];
   pickedBy: string | null;
+  pickedTogether: boolean;
   scores: { userId: string; score: number }[];
 }
 

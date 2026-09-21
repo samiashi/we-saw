@@ -143,7 +143,8 @@ Multi-tenant by **household**. Every user-data table carries `household_id` and 
 - `watches` — one row per movie or per logged TV run, scoped by `household_id`. `seasons int[]`
   lists the watched seasons (sorted; `null` = whole show), and one rating covers the whole run —
   a 10-of-14-seasons log is a single watch. `watchers uuid[]` is who
-  watched, `picked_by` is who chose it. A joint watch has every member, a solo watch has one. A
+  watched, `picked_by` is who chose it (`picked_together boolean` marks a joint pick, so `picked_by`
+  stays null then; there is no "Not sure"). A joint watch has every member, a solo watch has one. A
   `validate_watchers` trigger requires at least one watcher and every watcher to be a member of the
   watch's household. `watched_on` is nullable: null means "Not sure", and date-based analytics skip
   those rows while ratings/taste stats still count them. Logging reconciles Up Next: movies flip to
@@ -163,7 +164,8 @@ Any schema change needs: a new timestamped file in `supabase/migrations/`
 user-data tables must ship `household_id` and household-scoped policies in the same migration.
 
 Migrations are applied to the linked Supabase project (the initial schema, `restrict_anon_execute`,
-`fix_tenant_scoping`, `unknown_watch_dates` and `validate_watchers`). They are append-only — add a
+`fix_tenant_scoping`, `unknown_watch_dates`, `validate_watchers`, `watch_seasons` and
+`picked_together`). They are append-only — add a
 new timestamped file for every change, never edit one that has been applied. Use `supabase db push`
 for remote changes and keep `supabase/.temp` untracked.
 

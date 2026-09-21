@@ -34,6 +34,7 @@ export function LogSheet({
   const [note, setNote] = useState("");
   const [watchMode, setWatchMode] = useState("together");
   const [pickedBy, setPickedBy] = useState<string | null>(null);
+  const [pickedTogether, setPickedTogether] = useState(people.length > 1);
   const [scores, setScores] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
 
@@ -107,6 +108,17 @@ export function LogSheet({
     onClose();
   }
 
+  function chooseWatchMode(option: { id: string; watchers: string[] }) {
+    setWatchMode(option.id);
+    if (option.watchers.length > 1) {
+      setPickedTogether(true);
+      setPickedBy(null);
+    } else {
+      setPickedTogether(false);
+      setPickedBy(option.watchers[0] ?? null);
+    }
+  }
+
   function toggleSeason(seasonNumber: number) {
     setSelectedSeasons((current) => {
       if (current == null) return [seasonNumber];
@@ -128,6 +140,7 @@ export function LogSheet({
         note,
         watchers,
         pickedBy,
+        pickedTogether,
         scores: editable.map((person) => ({ userId: person.id, score: scores[person.id] })),
       });
       if (saved) onSaved(title);
@@ -324,7 +337,8 @@ export function LogSheet({
                       "text-muted flex-1 rounded-[9px] px-2 py-2 text-[13px] font-semibold transition-colors",
                       watchMode === option.id && "bg-surface-2 text-ink ring-accent/45 ring-1",
                     )}
-                    onClick={() => setWatchMode(option.id)}
+                    aria-pressed={watchMode === option.id}
+                    onClick={() => chooseWatchMode(option)}
                   >
                     {option.label}
                   </button>
@@ -340,25 +354,37 @@ export function LogSheet({
             <div className="flex flex-col gap-2">
               <span className="text-muted text-[13px]">Who picked it?</span>
               <div className="border-line bg-surface flex gap-1.5 rounded-xl border p-1">
-                <button
-                  type="button"
-                  className={cn(
-                    "text-muted flex-1 rounded-[9px] px-2 py-2 text-[13px] font-semibold transition-colors",
-                    pickedBy === null && "bg-surface-2 text-ink ring-accent/45 ring-1",
-                  )}
-                  onClick={() => setPickedBy(null)}
-                >
-                  Not sure
-                </button>
+                {people.length > 1 ? (
+                  <button
+                    type="button"
+                    className={cn(
+                      "text-muted flex-1 rounded-[9px] px-2 py-2 text-[13px] font-semibold transition-colors",
+                      pickedTogether && "bg-surface-2 text-ink ring-accent/45 ring-1",
+                    )}
+                    aria-pressed={pickedTogether}
+                    onClick={() => {
+                      setPickedTogether(true);
+                      setPickedBy(null);
+                    }}
+                  >
+                    Both of us
+                  </button>
+                ) : null}
                 {people.map((person) => (
                   <button
                     key={person.id}
                     type="button"
                     className={cn(
                       "text-muted flex-1 rounded-[9px] px-2 py-2 text-[13px] font-semibold transition-colors",
-                      pickedBy === person.id && "bg-surface-2 text-ink ring-accent/45 ring-1",
+                      !pickedTogether &&
+                        pickedBy === person.id &&
+                        "bg-surface-2 text-ink ring-accent/45 ring-1",
                     )}
-                    onClick={() => setPickedBy(person.id)}
+                    aria-pressed={!pickedTogether && pickedBy === person.id}
+                    onClick={() => {
+                      setPickedTogether(false);
+                      setPickedBy(person.id);
+                    }}
                   >
                     {person.id === userId ? "Me" : nameFor(person.id)}
                   </button>

@@ -584,11 +584,16 @@ export interface PickStat {
 export function pickStats(
   entries: Entry[],
   people: Person[],
-): { rows: PickStat[]; unassigned: number } {
+): { rows: PickStat[]; together: number; unassigned: number } {
   const buckets = new Map<string, { count: number; scores: number[] }>();
+  let together = 0;
   let unassigned = 0;
 
   for (const entry of entries) {
+    if (entry.watch.pickedTogether) {
+      together += 1;
+      continue;
+    }
     const pickedBy = entry.watch.pickedBy;
     if (!pickedBy || !people.some((person) => person.id === pickedBy)) {
       unassigned += 1;
@@ -609,7 +614,7 @@ export function pickStats(
     };
   });
 
-  return { rows, unassigned };
+  return { rows, together, unassigned };
 }
 
 export interface GenreGap {
@@ -813,14 +818,21 @@ export function buildInsights(entries: Entry[], people: Person[], now = new Date
   const joint = jointEntries(entries);
   const pair = people.length >= 2 ? { a: people[0], b: people[1] } : null;
 
-  const pickedEntries = entries.filter((entry) => entry.watch.pickedBy);
+  const pickedEntries = entries.filter(
+    (entry) => entry.watch.pickedTogether || entry.watch.pickedBy,
+  );
   if (pickedEntries.length >= 3) {
-    const firstPicked = pickedEntries[0].watch.pickedBy;
-    const firstChange = pickedEntries.findIndex((entry) => entry.watch.pickedBy !== firstPicked);
-    const runLength = firstChange === -1 ? pickedEntries.length : firstChange;
-    const picker = people.find((person) => person.id === firstPicked);
-    if (picker && runLength >= 3) {
-      insights.push({ id: "pick-streak", text: `${picker.name} picked the last ${runLength}` });
+    const first = pickedEntries[0].watch;
+    const firstPicked = first.pickedBy;
+    if (!first.pickedTogether && firstPicked) {
+      const firstChange = pickedEntries.findIndex(
+        (entry) => entry.watch.pickedTogether || entry.watch.pickedBy !== firstPicked,
+      );
+      const runLength = firstChange === -1 ? pickedEntries.length : firstChange;
+      const picker = people.find((person) => person.id === firstPicked);
+      if (picker && runLength >= 3) {
+        insights.push({ id: "pick-streak", text: `${picker.name} picked the last ${runLength}` });
+      }
     }
   }
 

@@ -33,6 +33,7 @@ export function mapWatch(row: Row, memberIds: string[]): Watch {
     watchers:
       Array.isArray(row.watchers) && row.watchers.length ? (row.watchers as string[]) : memberIds,
     pickedBy: (row.picked_by as string | null) ?? null,
+    pickedTogether: Boolean(row.picked_together),
     createdBy: (row.created_by as string | null) ?? null,
     createdAt: String(row.created_at),
   };

@@ -63,6 +63,7 @@ export function createRealtimeHandlers({
       note: String(row.note ?? ""),
       watchers: (row.watchers as string[] | null) ?? [],
       pickedBy: (row.picked_by as string | null) ?? null,
+      pickedTogether: Boolean(row.picked_together),
       createdBy: (row.created_by as string | null) ?? null,
       createdAt: String(row.created_at),
     };

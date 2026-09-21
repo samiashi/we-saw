@@ -138,7 +138,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       supabase
         .from("watches")
         .select(
-          "id, title_id, seasons, watched_on, note, watchers, picked_by, created_by, created_at",
+          "id, title_id, seasons, watched_on, note, watchers, picked_by, picked_together, created_by, created_at",
         ),
       supabase.from("ratings").select("watch_id, user_id, score, updated_at"),
       supabase
@@ -314,6 +314,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       note: input.note.trim(),
       watchers: input.watchers,
       pickedBy: input.pickedBy,
+      pickedTogether: input.pickedTogether,
       createdBy: userId,
       createdAt: now,
     };
@@ -346,6 +347,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           note: watch.note,
           watchers: watch.watchers,
           picked_by: watch.pickedBy ?? null,
+          picked_together: watch.pickedTogether ?? false,
           created_by: userId,
           household_id: householdId,
         }),
