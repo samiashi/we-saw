@@ -58,16 +58,14 @@ function WatchDetail({ entry, onClose }: { entry: Entry; onClose: () => void }) 
           </Button>
         </header>
 
-        <div
-          className={cn("relative -mx-4 -mt-4 overflow-hidden", hasBackdrop && "rounded-t-[20px]")}
-        >
+        <div className="relative -mx-4 -mt-4">
           {hasBackdrop ? (
-            <>
-              <Backdrop title={entry.title} className="h-40 w-full" />
+            <div className="relative h-40 overflow-hidden rounded-t-[20px]">
+              <Backdrop title={entry.title} className="h-full w-full" />
               <div className="from-surface absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t to-transparent" />
-            </>
+            </div>
           ) : null}
-          <div className={cn("flex gap-3.5 px-4", hasBackdrop ? "relative -mt-20" : "pt-1")}>
+          <div className={cn("flex items-start gap-3.5 px-4", hasBackdrop ? "-mt-20" : "pt-1")}>
             <Poster
               title={entry.title}
               className={cn(hasBackdrop && "ring-surface shadow-lg ring-4")}
