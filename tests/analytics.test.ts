@@ -186,6 +186,9 @@ describe("watch time", () => {
     expect(formatMinutes(500)).toBe("8h 20m");
     expect(formatMinutes(45)).toBe("45m");
     expect(formatMinutes(1500)).toBe("1d 1h");
+    expect(formatMinutes(59.6)).toBe("1h");
+    expect(formatMinutes(1440)).toBe("1d");
+    expect(formatMinutes(1470)).toBe("1d 30m");
   });
 });
 
@@ -271,7 +274,7 @@ describe("activity and queue analytics", () => {
         titleKey: "movie:1",
         status: "done",
         addedBy: "a",
-        createdAt: "2026-08-01T00:00:00.000Z",
+        createdAt: new Date(2026, 7, 1).toISOString(),
         updatedAt: "2026-09-07T00:00:00.000Z",
       },
       {
@@ -287,7 +290,7 @@ describe("activity and queue analytics", () => {
         titleKey: "tv:3",
         status: "queued",
         addedBy: "b",
-        createdAt: "2026-09-01T00:00:00.000Z",
+        createdAt: new Date(2026, 8, 1).toISOString(),
         updatedAt: "2026-09-01T00:00:00.000Z",
       },
     ];
@@ -297,9 +300,41 @@ describe("activity and queue analytics", () => {
     expect(stats.dropped).toBe(1);
     expect(stats.queued).toBe(1);
     expect(stats.abandonedShare).toBe(50);
-    expect(stats.medianLagDays).toBe(37);
+    expect(stats.medianLagDays).toBe(25);
     expect(stats.oldestWaitingDays).toBe(20);
     expect(stats.oldestWaitingKey).toBe("tv:3");
+  });
+
+  it("averages the middle two lags for an even sample", () => {
+    const items: ListItem[] = [
+      {
+        id: "e1",
+        titleKey: "movie:1",
+        status: "done",
+        addedBy: "a",
+        createdAt: new Date(2026, 5, 1).toISOString(),
+        updatedAt: "2026-06-11T00:00:00.000Z",
+      },
+      {
+        id: "e2",
+        titleKey: "movie:2",
+        status: "done",
+        addedBy: "a",
+        createdAt: new Date(2026, 5, 3).toISOString(),
+        updatedAt: "2026-06-23T00:00:00.000Z",
+      },
+    ];
+    const watched = buildEntries(
+      titles,
+      [
+        watch({ id: "e1w", titleKey: "movie:1", watchedOn: "2026-06-11" }),
+        watch({ id: "e2w", titleKey: "movie:2", watchedOn: "2026-06-23" }),
+      ],
+      [],
+    );
+    const stats = queueStats(items, watched, now);
+    expect(stats.sampleSize).toBe(2);
+    expect(stats.medianLagDays).toBe(15);
   });
 });
 
@@ -459,6 +494,14 @@ describe("joint and solo scopes", () => {
     const distribution = ratingDistribution(soloEntries(mixed, "a"), makeScorer("a"));
     expect(distribution).toHaveLength(10);
     expect(distribution.find((bucket) => bucket.score === 9)?.count).toBe(1);
+    expect(distribution.reduce((sum, bucket) => sum + bucket.count, 0)).toBe(1);
+  });
+
+  it("rounds fractional scores into the ten integer buckets", () => {
+    const fractional = buildEntries(titles, [watches[2]], [rating("w3", "a", 7.5)]);
+    const distribution = ratingDistribution(fractional, makeScorer("a"));
+    expect(distribution).toHaveLength(10);
+    expect(distribution.find((bucket) => bucket.score === 8)?.count).toBe(1);
     expect(distribution.reduce((sum, bucket) => sum + bucket.count, 0)).toBe(1);
   });
 });

@@ -509,7 +509,11 @@ export function queueStats(items: ListItem[], entries: Entry[], now = new Date()
   }
 
   lags.sort((a, b) => a - b);
-  const median = lags.length ? lags[Math.floor(lags.length / 2)] : null;
+  const median = lags.length
+    ? lags.length % 2 === 1
+      ? lags[Math.floor(lags.length / 2)]
+      : (lags[lags.length / 2 - 1] + lags[lags.length / 2]) / 2
+    : null;
   const terminal = finished + dropped;
 
   return {
@@ -926,7 +930,9 @@ export function ratingDistribution(
   for (const entry of entries) {
     const score = scorer(entry);
     if (score == null) continue;
-    counts.set(score, (counts.get(score) ?? 0) + 1);
+    const bucket = Math.round(score);
+    if (bucket < 1 || bucket > 10) continue;
+    counts.set(bucket, (counts.get(bucket) ?? 0) + 1);
   }
 
   return [...counts.entries()].map(([score, count]) => ({ score, count }));
@@ -1214,10 +1220,15 @@ export function predictionAccuracy(entries: Entry[], personId: string): Predicti
 }
 
 export function formatMinutes(minutes: number): string {
-  if (minutes < 60) return `${Math.round(minutes)}m`;
-  const hours = Math.floor(minutes / 60);
-  const rest = Math.round(minutes % 60);
+  const total = Math.max(0, Math.round(minutes));
+  if (total < 60) return `${total}m`;
+  const hours = Math.floor(total / 60);
+  const rest = total % 60;
   if (hours < 24) return rest ? `${hours}h ${rest}m` : `${hours}h`;
   const days = Math.floor(hours / 24);
-  return rest ? `${days}d ${hours % 24}h ${rest}m` : `${days}d ${hours % 24}h`;
+  const dayHours = hours % 24;
+  if (dayHours && rest) return `${days}d ${dayHours}h ${rest}m`;
+  if (dayHours) return `${days}d ${dayHours}h`;
+  if (rest) return `${days}d ${rest}m`;
+  return `${days}d`;
 }

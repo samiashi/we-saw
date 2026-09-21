@@ -30,7 +30,7 @@ export function TasteMatchSection({
           format={(value) => `${Math.round(value)}%`}
         />
         <StatCard
-          value={compat.correlation == null ? null : Math.round(compat.correlation * 100)}
+          value={compat.correlation}
           label="Correlation"
           format={(value) => value.toFixed(2)}
         />
