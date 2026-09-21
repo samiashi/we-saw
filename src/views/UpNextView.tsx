@@ -239,7 +239,7 @@ export function UpNextView() {
               <h2 className="text-[17px] font-semibold">{statusLabels[group.status]}</h2>
               <span className="text-muted text-[13px]">{group.rows.length}</span>
             </div>
-            <div className="grid auto-rows-fr gap-2">
+            <div className="grid auto-rows-fr grid-cols-1 gap-2">
               {group.rows.map(({ item, title }) => (
                 <ListRow
                   key={item.id}

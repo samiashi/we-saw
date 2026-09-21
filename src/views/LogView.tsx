@@ -159,7 +159,7 @@ export function LogView() {
       {showResults && searching ? <p className="text-muted text-[13px]">Searching…</p> : null}
 
       {showResults && results.length ? (
-        <div className="grid auto-rows-fr gap-2">
+        <div className="grid auto-rows-fr grid-cols-1 gap-2">
           {results.map((result) => (
             <div
               key={result.key}
@@ -244,7 +244,7 @@ export function LogView() {
       <section className="flex flex-col gap-2.5">
         <h2 className="text-[17px] font-semibold">Recent watches</h2>
         {recent.length ? (
-          <div className="grid auto-rows-fr gap-2">
+          <div className="grid auto-rows-fr grid-cols-1 gap-2">
             {recent.map((entry) => (
               <WatchCard key={entry.watch.id} entry={entry} />
             ))}
