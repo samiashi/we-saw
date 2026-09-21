@@ -24,7 +24,15 @@ function ProviderGroup({ label, providers }: { label: string; providers: WatchPr
               key={provider.name}
               className="border-line bg-surface-2 flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[13px]"
             >
-              {logo ? <img className="size-5 rounded" src={logo} alt="" loading="lazy" /> : null}
+              {logo ? (
+                <img
+                  className="size-5 rounded"
+                  src={logo}
+                  alt=""
+                  loading="lazy"
+                  crossOrigin="anonymous"
+                />
+              ) : null}
               {provider.name}
             </span>
           );

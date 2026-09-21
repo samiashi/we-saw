@@ -53,7 +53,7 @@ export default defineConfig(({ mode }) => {
               urlPattern: /^https:\/\/image\.tmdb\.org\/.*/i,
               handler: "StaleWhileRevalidate",
               options: {
-                cacheName: "tmdb-images",
+                cacheName: "tmdb-images-v2",
                 expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 30 },
               },
             },
