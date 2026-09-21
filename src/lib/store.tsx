@@ -63,22 +63,22 @@ export interface WeSawStore {
   listItems: ListItem[];
   addToList: (title: Title) => Promise<boolean>;
   setListStatus: (itemId: string, status: ListStatus) => Promise<void>;
-  removeFromList: (itemId: string) => Promise<void>;
+  removeFromList: (itemId: string) => Promise<boolean>;
   nameFor: (userId: string) => string;
   canEditScore: (userId: string, watchers: string[]) => boolean;
-  logWatch: (input: LogInput) => Promise<void>;
+  logWatch: (input: LogInput) => Promise<boolean>;
   setRating: (watchId: string, userId: string, score: number) => Promise<void>;
-  removeWatch: (watchId: string) => Promise<void>;
+  removeWatch: (watchId: string) => Promise<boolean>;
   patchTitle: (key: string, patch: Partial<Title>) => Promise<void>;
   renamePerson: (personId: string, name: string) => Promise<void>;
   renameHousehold: (name: string) => Promise<void>;
   invites: InviteCode[];
   createInvite: () => Promise<string | null>;
-  revokeInvite: (code: string) => Promise<void>;
+  revokeInvite: (code: string) => Promise<boolean>;
   redeemInvite: (code: string, displayName: string) => Promise<string | null>;
   appInvites: AppInvite[];
   createAppInvite: () => Promise<string | null>;
-  revokeAppInvite: (code: string) => Promise<void>;
+  revokeAppInvite: (code: string) => Promise<boolean>;
   createHousehold: (
     householdName: string,
     displayName: string,
@@ -312,7 +312,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ratings: [...current.ratings, ...nextRatings],
         listItems: reconcileAfterLog(current.listItems, input.title, now),
       }));
-      return;
+      return true;
     }
 
     const titleWrite = await supabase
@@ -320,7 +320,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       .upsert({ id: input.title.key, payload: input.title, updated_at: now });
     if (titleWrite.error) {
       setSyncError(errorText(titleWrite.error));
-      return;
+      return false;
     }
 
     const watchWrite = await supabase.from("watches").insert({
@@ -336,7 +336,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
     if (watchWrite.error) {
       setSyncError(errorText(watchWrite.error));
-      return;
+      return false;
     }
 
     const ownRatings = nextRatings
@@ -350,10 +350,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     if (ownRatings.length) {
       const ratingWrite = await supabase.from("ratings").upsert(ownRatings);
-      if (ratingWrite.error) {
-        setSyncError(errorText(ratingWrite.error));
-        return;
-      }
+      if (ratingWrite.error) setSyncError(errorText(ratingWrite.error));
     }
 
     const currentItems = data.listItems;
@@ -381,6 +378,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
 
     await loadCloud();
+    return true;
   }
 
   async function setRating(watchId: string, targetUserId: string, score: number) {
@@ -414,19 +412,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         watches: current.watches.filter((watch) => watch.id !== watchId),
         ratings: current.ratings.filter((rating) => rating.watchId !== watchId),
       }));
-      return;
+      return true;
     }
 
     const { error } = await supabase.from("watches").delete().eq("id", watchId);
     if (error) {
       setSyncError(errorText(error));
-      return;
+      return false;
     }
     setData((current) => ({
       ...current,
       watches: current.watches.filter((watch) => watch.id !== watchId),
       ratings: current.ratings.filter((rating) => rating.watchId !== watchId),
     }));
+    return true;
   }
 
   async function renamePerson(personId: string, name: string) {
@@ -550,18 +549,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...current,
         listItems: current.listItems.filter((item) => item.id !== itemId),
       }));
-      return;
+      return true;
     }
 
     const { error } = await supabase.from("list_items").delete().eq("id", itemId);
     if (error) {
       setSyncError(errorText(error));
-      return;
+      return false;
     }
     setData((current) => ({
       ...current,
       listItems: current.listItems.filter((item) => item.id !== itemId),
     }));
+    return true;
   }
 
   async function refresh() {
@@ -583,13 +583,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }
 
   async function revokeInvite(code: string) {
-    if (mode !== "cloud" || !supabase) return;
+    if (mode !== "cloud" || !supabase) return false;
     const { error } = await supabase.from("invite_codes").delete().eq("code", code);
     if (error) {
       setSyncError(errorText(error));
-      return;
+      return false;
     }
     setInvites((current) => current.filter((invite) => invite.code !== code));
+    return true;
   }
 
   async function redeemInvite(code: string, displayName: string): Promise<string | null> {
@@ -645,13 +646,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }
 
   async function revokeAppInvite(code: string) {
-    if (mode !== "cloud" || !supabase) return;
+    if (mode !== "cloud" || !supabase) return false;
     const { error } = await supabase.from("app_invites").delete().eq("code", code);
     if (error) {
       setSyncError(errorText(error));
-      return;
+      return false;
     }
     setAppInvites((current) => current.filter((invite) => invite.code !== code));
+    return true;
   }
 
   function exportData() {
