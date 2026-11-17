@@ -13,12 +13,8 @@ import { useStore } from "@/lib/store";
 import type { Title } from "@/lib/types";
 
 export function TonightSection({ onOpen }: { onOpen: (title: Title) => void }) {
-  const { listItems, titles, entries, people, household, userId, requestTonightPicks } = useStore();
+  const { entries, people, household, userId, requestTonightPicks } = useStore();
   const [open, setOpen] = useState(false);
-  const queued = listItems
-    .filter((item) => item.status === "queued" || item.status === "watching")
-    .map((item) => titles[item.titleKey])
-    .filter((title): title is Title => Boolean(title));
   return (
     <section className="border-accent/30 bg-accent/5 flex flex-col gap-3 rounded-2xl border p-4">
       <div className="flex items-start gap-3">
@@ -26,30 +22,32 @@ export function TonightSection({ onOpen }: { onOpen: (title: Title) => void }) {
           <Sparkles size={20} />
         </div>
         <div className="flex-1">
-          <h2 className="text-[17px] font-semibold">What fits tonight?</h2>
-          <p className="text-muted mt-1 text-sm">Your queue, your tastes, your kind of evening.</p>
+          <h2 className="text-[17px] font-semibold">Discover your next watch</h2>
+          <p className="text-muted mt-1 text-sm">
+            New movies and shows, inspired by everything you’ve watched and rated.
+          </p>
         </div>
       </div>
       <Drawer open={open} onOpenChange={setOpen}>
         <DrawerTrigger asChild>
           <Button variant="outline" className="self-start">
-            Help us choose
+            Find something new
           </Button>
         </DrawerTrigger>
         {open ? (
           <DrawerContent aria-describedby="tonight-description">
             <header className="bg-surface sticky top-0 z-10 -mx-4 flex items-center justify-between gap-3 px-4 pb-3">
-              <DrawerTitle className="text-xl font-semibold">Pick for tonight</DrawerTitle>
+              <DrawerTitle className="text-xl font-semibold">Find something new</DrawerTitle>
               <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
                 Close
               </Button>
             </header>
             <DrawerDescription id="tonight-description" className="sr-only">
-              Choose a mood and optional filters to get suggestions from your Up Next list.
+              Discover unseen movies and shows using your full watch history, ratings, and optional
+              mood.
             </DrawerDescription>
             <TonightPicker
               key={`${household?.id}:${userId}`}
-              titles={queued}
               history={entries}
               people={people}
               generate={requestTonightPicks}

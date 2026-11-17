@@ -12,9 +12,9 @@ A shared movie and TV diary for couples and small groups: log what you watched, 
 
 - Search movies and shows (TMDB), log a movie or pick any set of TV seasons (e.g. 10 of 14) with one shared rating, plus the date (or "Not sure") and a note.
 - **Multi-household**: every group gets its own private data; friends start their own household with a friend-invite code you generate.
-- **Up Next** tab: queue titles, mark what's watching, and drop what you bailed on — logging a movie removes it, logging a TV run moves it to Watching.
+- **Up Next** tab: queue titles, mark what's watching, and drop what you bailed on — logging a movie marks it Done, logging a TV run moves it to Watching.
 - **Tonight's pick**: a taste engine builds a genre/actor/director profile per person and ranks your list by the safer minimum score, with a reason line.
-- **Help us choose**: optional AI picks from Up Next, with mood shortcuts, movie/TV and time filters, brief reasons, and session-only skips. Uses GPT-6.1 Sol at low reasoning; the usual taste ranking remains available if AI is unavailable. [Research, privacy, and setup](docs/ai-tonight.md).
+- **Find something new**: AI discovery in the Log tab, based on your entire logged history and ratings — genres, actors, directors/TV creators, movies/shows, languages, countries, eras and runtimes. Finds unseen catalog titles without requiring Up Next, with optional mood/type/time filters, reasons, and session-only skips. Uses GPT-6.1 Sol at low reasoning. [Research, privacy, and setup](docs/ai-tonight.md).
 - **Discover**: Popular this week and "Because you loved X" rows, with a _Safe for us_ toggle that ranks by the lower of your two predicted scores.
 - **Where to watch**: streaming and free providers for your country (JustWatch via TMDB) in discover and history sheets, plus **next-episode air dates** on TV shows in Up Next.
 - Choose who watched: **Together** or **Just me** — rating slots, waiting states and stats all follow the watchers.
@@ -62,7 +62,7 @@ OPENAI_API_KEY=        # optional; server-only AI picks, never use a VITE_ prefi
 
 Without `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` the app shows a setup screen instead of the log.
 
-For AI picks, apply the `tonight_usage` migration and set `OPENAI_API_KEY` in Vercel before redeploying. The key stays on the server. Each household can make up to 20 requests per UTC day, at least eight seconds apart. Missing AI configuration or quota storage falls back to the existing taste ranking. [Setup and validation details](docs/ai-tonight.md).
+For AI picks, apply the `tonight_usage` migration and set `OPENAI_API_KEY` in Vercel before redeploying. The key stays on the server. Each household can make up to 20 requests per UTC day, at least eight seconds apart. Missing AI configuration or quota storage shows an error without spending on a model request. [Setup and validation details](docs/ai-tonight.md).
 
 `npm run icons` regenerates the PWA icons from the same geometry as `public/icon.svg`, and `public/logo.svg` is the wordmark lockup (dependency-free PNG writer, no image deps). The mark is a coral-and-cream striped popcorn bucket topped with amber popcorn and two movie tickets.
 

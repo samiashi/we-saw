@@ -6,12 +6,14 @@ import {
   fetchTitleDetails,
   fetchTrending,
   searchCatalog,
+  titleToSummary,
 } from "@/lib/api";
 import { buildTasteProfile, safeSummaryScore } from "@/lib/analytics";
 import { useStore } from "@/lib/store";
 import { useToast } from "@/hooks/useToast";
 import type { Title, TitleSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { TonightSection } from "@/components/TonightSection";
 import { DiscoveryRow } from "@/components/DiscoveryRow";
 import { DiscoverySheet } from "@/components/DiscoverySheet";
 import { LogSheet } from "@/components/LogSheet";
@@ -197,6 +199,7 @@ export function LogView() {
 
       {!showResults ? (
         <>
+          <TonightSection onOpen={(title) => setDiscovery(titleToSummary(title))} />
           {trending === null ? (
             <Skeleton className="h-[190px] w-full" />
           ) : (

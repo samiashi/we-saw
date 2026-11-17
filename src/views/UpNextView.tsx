@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Play, Sparkles } from "lucide-react";
 import { LogSheet } from "@/components/LogSheet";
-import { TonightSection } from "@/components/TonightSection";
-import { DiscoverySheet } from "@/components/DiscoverySheet";
 import { Poster } from "@/components/Poster";
 import { QueueListRow } from "@/components/QueueListRow";
 import { PredictionChips } from "@/components/PredictionChips";
@@ -29,7 +27,6 @@ export function UpNextView() {
   const { listItems, titles, entries, people, nameFor } = useStore();
   const toast = useToast();
   const [selected, setSelected] = useState<TitleSummary | null>(null);
-  const [discovery, setDiscovery] = useState<TitleSummary | null>(null);
   const [air, setAir] = useState<Record<string, NextEpisode | null>>({});
 
   const resolved = useMemo(
@@ -134,8 +131,6 @@ export function UpNextView() {
         </section>
       ) : null}
 
-      <TonightSection onOpen={(title) => setDiscovery(titleToSummary(title))} />
-
       {!resolved.length ? (
         <p className="text-muted text-[13px]">
           Nothing on the list yet. Search in the Log tab and tap the bookmark to add something.
@@ -174,16 +169,6 @@ export function UpNextView() {
           onSaved={(title) => {
             setSelected(null);
             toast.show(`Logged ${title.name}`);
-          }}
-        />
-      ) : null}
-      {discovery ? (
-        <DiscoverySheet
-          summary={discovery}
-          onClose={() => setDiscovery(null)}
-          onLog={(summary) => {
-            setDiscovery(null);
-            setSelected(summary);
           }}
         />
       ) : null}

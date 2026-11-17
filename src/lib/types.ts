@@ -17,6 +17,9 @@ export interface TonightPick {
 export interface TonightResult {
   picks: TonightPick[];
   candidateCount: number;
+  historyCount: number;
+  ratedCount: number;
+  titles: Title[];
 }
 
 export interface SeasonInfo {

@@ -1,15 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { buildTasteProfile, filterTonightTitles, rankPicks } from "@/lib/analytics";
-import type { Entry, Person, Title, TonightPreferences, TonightResult } from "@/lib/types";
+import { filterTonightTitles } from "@/lib/analytics";
+import type { Entry, Person, TonightPreferences, TonightResult } from "@/lib/types";
 
 export function useTonightPicks({
-  titles,
   history,
   people,
   preferences,
   generate,
 }: {
-  titles: Title[];
   history: Entry[];
   people: Person[];
   preferences: TonightPreferences;
@@ -23,10 +21,9 @@ export function useTonightPicks({
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const controller = useRef<AbortController | null>(null);
   const requestId = useRef(0);
-  // Changed queue metadata, ratings, viewers, or controls invalidate any earlier response.
+  // Changed history, ratings, viewers, or controls invalidate earlier responses.
   const contextKey = JSON.stringify([
     [preferences.mood, preferences.type, preferences.maxMinutes],
-    titles,
     history.map((e) => [e.watch.id, e.watch.watchers, e.scores, e.title]),
     people.map((p) => p.id),
   ]);
@@ -38,25 +35,11 @@ export function useTonightPicks({
     },
     [key],
   );
-  const eligible = filterTonightTitles(titles, preferences);
   const current = response?.key === contextKey ? response : null;
   const loading = pendingKey === key;
-  const profiles = people.map((person) => buildTasteProfile(history, person.id));
-  const ranked = profiles.some((profile) => profile.count > 0)
-    ? rankPicks(eligible, profiles).map((pick) => pick.title)
-    : eligible;
-  const fallback = current?.error
-    ? ranked.slice(0, 3).map((title) => ({
-        key: title.key,
-        reason: profiles.some((p) => p.count > 0)
-          ? "From your usual taste ranking."
-          : "From your Up Next list.",
-        caveat: "",
-        evidence: [],
-      }))
-    : [];
-  const picks = (current?.result?.picks ?? fallback).filter((pick) =>
-    eligible.some((title) => title.key === pick.key),
+  const titles = filterTonightTitles(current?.result?.titles ?? [], preferences);
+  const picks = (current?.result?.picks ?? []).filter((pick) =>
+    titles.some((title) => title.key === pick.key),
   );
 
   function cancel() {
@@ -82,10 +65,10 @@ export function useTonightPicks({
         setResponse({
           key: contextKey,
           error: abort.signal.aborted
-            ? "That took too long. Your usual taste ranking is below."
+            ? "That took too long. Please try again."
             : error instanceof Error
               ? error.message
-              : "AI picks are unavailable. Your usual taste ranking is below.",
+              : "Recommendations are unavailable. Please try again.",
         });
     } finally {
       window.clearTimeout(timer);
@@ -97,7 +80,7 @@ export function useTonightPicks({
     picks,
     error: current?.error,
     result: current?.result,
-    eligible,
+    titles,
     findPicks,
     cancel,
   };

@@ -17,13 +17,11 @@ const moods = [
 ];
 
 export function TonightPicker({
-  titles,
   history,
   people,
   generate,
   onOpen,
 }: {
-  titles: Title[];
   history: Entry[];
   people: Person[];
   generate: (preferences: TonightPreferences, signal: AbortSignal) => Promise<TonightResult>;
@@ -40,7 +38,7 @@ export function TonightPicker({
     maxMinutes,
     excluded,
   };
-  const state = useTonightPicks({ titles, history, people, preferences, generate });
+  const state = useTonightPicks({ history, people, preferences, generate });
   const statusRef = useRef<HTMLParagraphElement>(null);
   useEffect(() => {
     const status = statusRef.current;
@@ -62,14 +60,17 @@ export function TonightPicker({
     : (state.error ??
       (state.result
         ? state.picks.length
-          ? `${state.picks.length} ${state.picks.length === 1 ? "pick" : "picks"} from ${state.result.candidateCount} titles considered.`
-          : "Nothing looks like a good fit. Try a different mood or loosen your filters."
+          ? `${state.picks.length} ${state.picks.length === 1 ? "pick" : "picks"} from ${state.result.candidateCount} unseen titles, informed by ${state.result.historyCount} logged watches (${state.result.ratedCount} rated).`
+          : state.result.historyCount === 0
+            ? "Log and rate a few watches first so we can learn your taste."
+            : "No new picks fit this request. Try different filters or reset skipped titles."
         : ""));
 
   return (
     <div className="flex flex-col gap-4">
       <p className="text-muted text-sm leading-relaxed">
-        A few choices from your queue, shaped by your ratings and tonight’s mood.
+        Discover movies and shows through your full watch history: ratings, genres, actors,
+        directors and more. Add a mood if you have one.
       </p>
       <fieldset
         disabled={state.loading}
@@ -141,11 +142,7 @@ export function TonightPicker({
         </label>
       </fieldset>
       <div className="flex items-center gap-2">
-        <Button
-          className="flex-1"
-          disabled={state.loading || !state.eligible.length}
-          onClick={() => void state.findPicks()}
-        >
+        <Button className="flex-1" disabled={state.loading} onClick={() => void state.findPicks()}>
           <Sparkles size={16} />
           {state.loading ? "Finding picks…" : "Find picks"}
         </Button>
@@ -156,9 +153,10 @@ export function TonightPicker({
         ) : null}
       </div>
       <p className="text-muted text-xs leading-relaxed">
-        Uses OpenAI to consider queue details, recent ratings, and your request. Diary notes and
-        account details stay out. AI suggestions can miss the mark; review title details for
-        anything you need to avoid.
+        Uses OpenAI with taste patterns from your full history, selected rated examples, catalog
+        details, and your request. Each person’s ratings stay separate. Diary notes and account
+        details stay out. AI suggestions can miss the mark; review title details for anything you
+        need to avoid.
       </p>
       <p
         ref={statusRef}
@@ -169,26 +167,13 @@ export function TonightPicker({
       >
         {status}
       </p>
-      {state.error ? (
-        <p className="text-muted text-xs">
-          Mood preferences were not applied to these fallback picks. Type and time filters still
-          apply.
-        </p>
-      ) : null}
-      {!state.eligible.length ? (
-        <p className="text-muted text-sm">
-          {titles.length
-            ? "No queued titles fit these filters. Try more time, a different type, or reset skipped titles."
-            : "Add a few titles to Up Next to find your next watch."}
-        </p>
-      ) : null}
       {excluded.length ? (
         <Button variant="ghost" size="sm" className="self-start" onClick={() => setExcluded([])}>
           Reset skipped titles
         </Button>
       ) : null}
       {state.picks.map((pick, index) => {
-        const title = titles.find((title) => title.key === pick.key);
+        const title = state.titles.find((title) => title.key === pick.key);
         return title ? (
           <TonightPickCard
             key={pick.key}
@@ -199,7 +184,7 @@ export function TonightPicker({
               .map((key) => historyNames.get(key))
               .filter((name): name is string => Boolean(name))}
             onOpen={() => onOpen(title)}
-            onSkip={() => setExcluded((current) => [...current, pick.key])}
+            onSkip={() => setExcluded((current) => [...current, pick.key].slice(-100))}
           />
         ) : null;
       })}

@@ -271,9 +271,12 @@ that was still leaving), load-generation guards and per-user ready state, optimi
 merges, persisted-value rating rollback, `addToList` result states, air-date caching honesty, the
 missing TMDB TV genre 10765, search debounce races, and the queue/rewatch/affinity analytics fixes.
 
-Implemented November 2026: queue-based “Help us choose” with GPT-6.1 Sol at low reasoning,
-authenticated POST `action=tonight`, server-loaded household context, structured output validation,
-runtime/type filters, session skips, cancellation, and deterministic fallback. Private AI responses
+Implemented November 2026: full-history “Find something new” discovery in the Log tab with GPT-6.1 Sol at low reasoning,
+authenticated POST `action=tonight`, paginated full household history, anonymous per-viewer taste
+summaries, TMDB candidate retrieval, structured output validation, runtime/type filters, session
+skips, and cancellation. It does not read Up Next; all logged titles (including unrated ones) are
+excluded. `server/tonightContext.js` prepares model context; `server/tonightDiscovery.js` retrieves
+catalog-backed unseen candidates. Errors never substitute queue picks. Private AI responses
 must never enter the public catalog CDN/service-worker caches. `tonight_usage` is a server-only
 household quota counter (20 attempts/UTC day, 8-second cooldown), written only by its authenticated
 RPC; it has no browser store collection or realtime subscription. The quota migration was applied

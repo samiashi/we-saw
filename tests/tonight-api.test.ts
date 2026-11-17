@@ -3,6 +3,7 @@ import { handleCatalog } from "../server/catalog.js";
 
 const env = {
   OPENAI_API_KEY: "test-key",
+  TMDB_API_KEY: "catalog-key",
   VITE_SUPABASE_URL: "https://example.supabase.co",
   VITE_SUPABASE_PUBLISHABLE_KEY: "public-key",
 };
@@ -35,6 +36,10 @@ function setup(
     status?: number;
     empty?: boolean;
     invalidAuth?: boolean;
+    watches?: unknown[];
+    pageSize?: number;
+    catalogFailure?: boolean;
+    laterPageFailure?: boolean;
   } = {},
 ) {
   const calls: { url: string; body: string }[] = [];
@@ -52,34 +57,65 @@ function setup(
           { user_id: "person-a", household_id: "home-a" },
           { user_id: "person-b", household_id: "home-a" },
         ]);
-      if (url.includes("/rest/v1/list_items"))
-        return Response.json(
-          options.empty
-            ? []
-            : [
-                { title_id: "movie:1", status: "queued", title: { payload: title } },
-                {
-                  title_id: "movie:2",
-                  status: "queued",
-                  title: { payload: { ...title, key: "movie:2", runtimeMinutes: 150 } },
-                },
-                {
-                  title_id: "movie:3",
-                  status: "queued",
-                  title: { payload: { ...title, key: "movie:3", runtimeMinutes: null } },
-                },
-              ],
-        );
-      if (url.includes("/rest/v1/watches"))
-        return Response.json([
+      if (url.includes("/rest/v1/watches")) {
+        const watches = options.watches ?? [
           {
-            id: "watch-1",
+            id: "watch-001",
+            title_id: "movie:101",
             watchers: ["person-a"],
-            title: { payload: title },
+            title: {
+              payload: {
+                ...title,
+                key: "movie:101",
+                cast: ["A performer"],
+                directors: ["A filmmaker"],
+              },
+            },
             ratings: [{ user_id: "person-a", score: 9 }],
             note: "Private note never sent",
           },
-        ]);
+        ];
+        const after = new URL(url).searchParams.get("id")?.slice(3);
+        if (after && options.laterPageFailure) return Response.json({}, { status: 503 });
+        return Response.json(
+          watches
+            .filter((w) => !after || (w as { id: string }).id > after)
+            .slice(0, options.pageSize ?? 200),
+        );
+      }
+      if (url.includes("api.themoviedb.org")) {
+        if (options.catalogFailure) return Response.json({}, { status: 503 });
+        const path = new URL(url).pathname;
+        if (path.includes("/search/person"))
+          return Response.json({
+            results: [{ id: 42, name: new URL(url).searchParams.get("query") }],
+          });
+        if (path.includes("/combined_credits") && options.empty)
+          return Response.json({ cast: [], crew: [] });
+        if (path.includes("/combined_credits"))
+          return Response.json({
+            cast: [{ id: 1, media_type: "movie" }],
+            crew: [{ id: 1, media_type: "movie", job: "Director" }],
+          });
+        if (path.includes("/genre/"))
+          return Response.json({ genres: [{ id: 35, name: "Comedy" }] });
+        if (/recommendations|discover/.test(path))
+          return Response.json({
+            results: options.empty ? [] : [1, 2, 3, 101].map((id) => ({ id, media_type: "movie" })),
+          });
+        const id = Number(path.split("/").at(-1));
+        return Response.json({
+          id,
+          title: title.name,
+          overview: title.overview,
+          genres: [{ name: "Comedy" }],
+          runtime: id === 1 ? 95 : id === 2 ? 150 : null,
+          credits: {
+            cast: [{ name: "A performer" }],
+            crew: [{ job: "Director", name: "A filmmaker" }],
+          },
+        });
+      }
       if (url.includes("/rpc/consume_tonight_request")) return Response.json(options.quota ?? true);
       if (url === "https://api.openai.com/v1/responses")
         return Response.json(
@@ -97,7 +133,7 @@ function setup(
                           key: "movie:1",
                           reason: "A short comedy for a relaxed evening.",
                           caveat: "There is little rating history for your second viewer.",
-                          evidence: ["movie:1"],
+                          evidence: options.watches ? [] : ["movie:101"],
                         },
                       ],
                     }),
@@ -145,6 +181,9 @@ describe("Tonight API", () => {
     expect(sent.input).not.toContain("home-a");
     expect(sent.input).not.toContain("Private note");
     const context = JSON.parse(sent.input);
+    expect(calls.some((c) => c.url.includes("list_items"))).toBe(false);
+    expect(context.historyCount).toBe(1);
+    expect(context.taste[0].facets.cast).toMatchObject([{ name: "A performer", meanRating: 9 }]);
     expect(context.candidates.map((c: { key: string }) => c.key)).toEqual(["movie:1"]);
     expect(
       calls
@@ -152,11 +191,86 @@ describe("Tonight API", () => {
         .every((c) => new URL(c.url).searchParams.get("household_id") === "eq.home-a"),
     ).toBe(true);
   });
-  it("does not spend quota or call OpenAI when no candidates fit", async () => {
+  it("does not call OpenAI when no catalog candidates fit", async () => {
     const calls = setup({ empty: true });
     const result = await handleCatalog(request);
     expect(result.body).toMatchObject({ picks: [], candidateCount: 0 });
-    expect(calls.some((c) => /openai.com|consume_tonight/.test(c.url))).toBe(false);
+    expect(calls.some((c) => /openai.com/.test(c.url))).toBe(false);
+  });
+  it("uses every page, including older ratings, without reading Up Next", async () => {
+    const watches = Array.from({ length: 205 }, (_, index) => ({
+      id: `watch-${String(index).padStart(4, "0")}`,
+      title_id: `movie:${1000 + index}`,
+      watchers: ["person-a"],
+      seasons: null,
+      title: {
+        payload: {
+          ...title,
+          key: `movie:${1000 + index}`,
+          cast: [index === 204 ? "Old favorite" : "Other actor"],
+          directors: ["Repeated director"],
+        },
+      },
+      ratings: [
+        { user_id: "person-a", score: index === 204 ? 10 : 3 },
+        { user_id: "person-b", score: 10 },
+      ],
+    }));
+    const calls = setup({ watches, pageSize: 73 });
+    const result = await handleCatalog(request);
+    expect(result.status).toBe(200);
+    expect(result.body).toMatchObject({ historyCount: 205, ratedCount: 205 });
+    const context = JSON.parse(
+      JSON.parse(calls.find((c) => c.url.includes("openai.com"))!.body).input,
+    );
+    expect(context.taste[0].ratedWatches).toBe(205);
+    expect(context.taste[1].ratedWatches).toBe(0); // Non-watchers cannot supply taste evidence.
+    expect(context.taste[0].facets.cast).toContainEqual(
+      expect.objectContaining({ name: "Old favorite", meanRating: 10 }),
+    );
+    expect(context.taste[0].facets.directors).toMatchObject([{ count: 205 }]);
+    expect(calls.some((c) => c.url.includes("/movie/1204/recommendations"))).toBe(true);
+    expect(calls.filter((c) => c.url.includes("/rest/v1/watches"))).toHaveLength(4);
+    expect(calls.some((c) => c.url.includes("list_items"))).toBe(false);
+  });
+  it("fails rather than silently using an incomplete history", async () => {
+    const calls = setup({ laterPageFailure: true });
+    expect((await handleCatalog(request)).status).toBe(502);
+    expect(calls.some((c) => /openai.com|themoviedb/.test(c.url))).toBe(false);
+  });
+  it("does not spend or call the catalog for an empty diary", async () => {
+    const calls = setup({ watches: [] });
+    expect((await handleCatalog(request)).body).toMatchObject({
+      historyCount: 0,
+      picks: [],
+      titles: [],
+    });
+    expect(calls.some((c) => /openai.com|themoviedb|consume_tonight/.test(c.url))).toBe(false);
+  });
+  it("excludes logged titles even if nobody rated them", async () => {
+    const calls = setup({
+      watches: [
+        {
+          id: "watch-1",
+          title_id: "movie:1",
+          watchers: ["person-a"],
+          title: { payload: title },
+          ratings: [],
+        },
+      ],
+    });
+    expect((await handleCatalog(request)).body).toMatchObject({
+      historyCount: 1,
+      ratedCount: 0,
+      picks: [],
+      titles: [],
+    });
+    expect(calls.some((c) => c.url.includes("openai.com"))).toBe(false);
+  });
+  it("reports a catalog outage instead of claiming no titles fit", async () => {
+    const calls = setup({ catalogFailure: true });
+    expect((await handleCatalog(request)).status).toBe(502);
+    expect(calls.some((c) => c.url.includes("openai.com"))).toBe(false);
   });
   it("enforces durable quota before a paid call", async () => {
     const calls = setup({ quota: false });

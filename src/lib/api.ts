@@ -25,11 +25,10 @@ export async function fetchTonightPicks(
       401: "Your session expired. Sign in again to get AI picks.",
       403: "Join a household to get AI picks.",
       429: "Please wait a moment before trying again. Each household has 20 requests per day.",
-      503: "AI picks are not available yet. Your usual taste ranking is below.",
+      503: "AI discovery is not available yet. Please try again later.",
     };
     throw new Error(
-      messages[response.status] ??
-        "AI picks are unavailable right now. Your usual taste ranking is below.",
+      messages[response.status] ?? "AI discovery is unavailable right now. Please try again.",
     );
   }
   return response.json();

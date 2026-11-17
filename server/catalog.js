@@ -61,14 +61,18 @@ function fetchWithTimeout(url, timeoutMs = REQUEST_TIMEOUT_MS) {
   return fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
 }
 
-async function tmdbFetch(path, key, params = {}) {
+async function tmdbFetch(path, key, params = {}, signal) {
   const url = new URL(`${TMDB_BASE}${path}`);
   url.searchParams.set("api_key", key);
   for (const [name, value] of Object.entries(params)) {
     if (value !== undefined && value !== null && value !== "")
       url.searchParams.set(name, String(value));
   }
-  const response = await fetchWithTimeout(url);
+  const response = signal
+    ? await fetch(url, {
+        signal: AbortSignal.any([signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)]),
+      })
+    : await fetchWithTimeout(url);
   if (!response.ok) {
     const text = await response.text();
     throw new Error(`TMDB ${response.status}: ${text.slice(0, 200)}`);
@@ -131,15 +135,20 @@ async function search(query, env) {
   return json(200, { results }, PUBLIC_CACHE);
 }
 
-async function title(query, env) {
+async function title(query, env, signal) {
   if (!env.TMDB_API_KEY) return json(503, { error: "missing_key", missing: "TMDB_API_KEY" });
   const type = query.type === "tv" ? "tv" : "movie";
   const id = Number(query.id);
   if (!Number.isFinite(id) || id <= 0) return json(400, { error: "missing_id" });
 
-  const data = await tmdbFetch(`/${type}/${id}`, env.TMDB_API_KEY, {
-    append_to_response: "credits,external_ids",
-  });
+  const data = await tmdbFetch(
+    `/${type}/${id}`,
+    env.TMDB_API_KEY,
+    {
+      append_to_response: "credits,external_ids",
+    },
+    signal,
+  );
 
   const credits = data.credits ?? {};
   const imdbId = data.external_ids?.imdb_id ?? data.imdb_id ?? null;
@@ -337,7 +346,22 @@ export async function handleCatalog({
   }
 
   try {
-    if (action === "tonight") return await handleTonight({ env, method, authorization, body });
+    if (action === "tonight")
+      return await handleTonight({
+        env,
+        method,
+        authorization,
+        body,
+        catalog: {
+          fetch: (path, params, signal) => tmdbFetch(path, env.TMDB_API_KEY, params, signal),
+          details: async (type, id, signal) => {
+            const response = await title({ type, id }, env, signal);
+            if (response.status !== 200 || response.body.title.key !== `${type}:${id}`)
+              throw new Error("Invalid catalog title");
+            return { ...response.body.title, critic: null, addedAt: new Date().toISOString() };
+          },
+        },
+      });
     if (action === "health") {
       return json(200, {
         ok: true,

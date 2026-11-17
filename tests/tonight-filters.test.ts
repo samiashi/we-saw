@@ -4,8 +4,8 @@ import type { Title } from "@/lib/types";
 
 const title = (key: string, runtimeMinutes: number | null, type: "movie" | "tv" = "movie") =>
   ({ key, runtimeMinutes, type, genres: ["Comedy"], cast: [], directors: [] }) as unknown as Title;
-describe("Tonight fallback candidates", () => {
-  it("keeps explicit type, runtime and exclusions when AI is unavailable", () => {
+describe("Discovery result filters", () => {
+  it("keeps explicit type, runtime and exclusions on returned catalog titles", () => {
     expect(
       filterTonightTitles(
         [

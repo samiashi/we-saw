@@ -1,11 +1,8 @@
 import { generateTonightPicks } from "./tonightModel.js";
+import { buildTonightContext, compactTitle, validKey } from "./tonightContext.js";
+import { discoverTonight } from "./tonightDiscovery.js";
 
 const result = (status, body) => ({ status, body, cacheControl: "private, no-store" });
-const validKey = (key) => typeof key === "string" && /^(movie|tv):[1-9]\d*$/.test(key);
-const text = (value, limit) => (typeof value === "string" ? value.slice(0, limit) : "");
-const names = (values, limit) =>
-  Array.isArray(values) ? values.slice(0, limit).map((value) => text(value, 80)) : [];
-
 function preferences(body) {
   if (!body || typeof body !== "object" || Array.isArray(body)) return null;
   const { mood = "", type = "all", maxMinutes = null, excluded = [] } = body;
@@ -23,32 +20,7 @@ function preferences(body) {
   return { mood: mood.trim(), type, maxMinutes, excluded };
 }
 
-function compactTitle(payload, key) {
-  if (
-    !payload ||
-    !validKey(key) ||
-    !["movie", "tv"].includes(payload.type) ||
-    !key.startsWith(`${payload.type}:`) ||
-    !payload.name
-  )
-    return null;
-  return {
-    key,
-    name: text(payload.name, 160),
-    type: payload.type,
-    year: text(payload.year, 4),
-    overview: text(payload.overview, 600),
-    genres: names(payload.genres, 8),
-    cast: names(payload.cast, 3),
-    directors: names(payload.directors, 3),
-    runtimeMinutes:
-      Number.isFinite(payload.runtimeMinutes) && payload.runtimeMinutes > 0
-        ? payload.runtimeMinutes
-        : null,
-  };
-}
-
-export async function handleTonight({ env, method, authorization, body }) {
+export async function handleTonight({ env, method, authorization, body, catalog }) {
   if (method !== "POST") return result(405, { error: "method_not_allowed" });
   if (
     typeof authorization !== "string" ||
@@ -60,8 +32,10 @@ export async function handleTonight({ env, method, authorization, body }) {
   if (!prefs) return result(400, { error: "invalid_preferences" });
   const base = env.VITE_SUPABASE_URL?.replace(/\/+$/, "");
   const key = env.VITE_SUPABASE_PUBLISHABLE_KEY || env.VITE_SUPABASE_ANON_KEY;
-  if (!env.OPENAI_API_KEY || !base || !key) return result(503, { error: "not_configured" });
+  if (!env.OPENAI_API_KEY || !env.TMDB_API_KEY || !base || !key)
+    return result(503, { error: "not_configured" });
 
+  const deadline = AbortSignal.timeout(48000);
   async function cloud(path, params = {}, post = false) {
     const url = new URL(path, base);
     for (const [name, value] of Object.entries(params)) url.searchParams.set(name, value);
@@ -69,7 +43,7 @@ export async function handleTonight({ env, method, authorization, body }) {
       method: post ? "POST" : "GET",
       headers: { apikey: key, Authorization: authorization, "Content-Type": "application/json" },
       ...(post ? { body: "{}" } : {}),
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.any([deadline, AbortSignal.timeout(8000)]),
     });
   }
   async function read(path, params) {
@@ -96,80 +70,64 @@ export async function handleTonight({ env, method, authorization, body }) {
     const viewers = members
       .filter((member) => member.household_id === household)
       .map((member) => member.user_id);
-    const [items, watches] = await Promise.all([
-      read("list_items", {
-        select: "title_id,status,title:titles(payload)",
+    // Keyset pagination reads the entire household history, including unrated
+    // watches for exclusion. Never silently substitute a recent-history slice.
+    const watches = [];
+    let after;
+    while (true) {
+      const page = await read("watches", {
+        select: "id,title_id,watchers,seasons,title:titles(payload),ratings(user_id,score)",
         household_id: `eq.${household}`,
-        status: "in.(queued,watching)",
-        order: "created_at.desc,id.asc",
-        limit: "1000",
-      }),
-      read("watches", {
-        select: "title_id,watchers,title:titles(payload),ratings(user_id,score)",
-        household_id: `eq.${household}`,
-        order: "created_at.desc,id.asc",
-        limit: "100",
-      }),
-    ]);
-    const eligible = items
-      .filter((item) => ["queued", "watching"].includes(item.status))
-      .map((item) => compactTitle(item.title?.payload, item.title_id))
-      .filter(
-        (title) =>
-          title &&
-          !prefs.excluded.includes(title.key) &&
-          (prefs.type === "all" || prefs.type === title.type) &&
-          (prefs.maxMinutes === null ||
-            (title.runtimeMinutes !== null && title.runtimeMinutes <= prefs.maxMinutes)),
-      );
-    const candidates = [...new Map(eligible.map((title) => [title.key, title])).values()].slice(
-      0,
-      40,
-    );
-    if (!candidates.length) return result(200, { picks: [], candidateCount: 0 });
-    const history = watches
-      .map((watch) => {
-        const title = compactTitle(
-          watch.title?.payload,
-          watch.title_id ?? watch.title?.payload?.key,
-        );
-        if (!title) return null;
-        const ratings = Object.fromEntries(
-          viewers.flatMap((id, index) => {
-            const rating = (watch.ratings ?? []).find(
-              (rating) =>
-                rating.user_id === id &&
-                watch.watchers?.includes(id) &&
-                Number.isInteger(rating.score) &&
-                rating.score >= 1 &&
-                rating.score <= 10,
-            );
-            return rating ? [[`Viewer ${index + 1}`, rating.score]] : [];
-          }),
-        );
-        if (!Object.keys(ratings).length) return null;
-        return {
-          ...title,
-          overview: undefined,
-          scope: watch.watchers?.length > 1 ? "together" : "solo",
-          ratings,
-        };
-      })
-      .filter(Boolean)
-      .slice(0, 60);
+        order: "id.asc",
+        limit: "200",
+        ...(after ? { id: `gt.${after}` } : {}),
+      });
+      if (!Array.isArray(page)) throw new Error("Invalid history");
+      watches.push(...page);
+      if (!page.length) break;
+      const next = page.at(-1)?.id;
+      if (typeof next !== "string" || (after && next <= after))
+        throw new Error("Invalid history cursor");
+      after = next;
+      // Continue even on a short page: a project can enforce a smaller row cap.
+    }
+    const context = buildTonightContext(watches, viewers);
+    const counts = { historyCount: context.historyCount, ratedCount: context.ratedCount };
+    if (!watches.length)
+      return result(200, { picks: [], titles: [], candidateCount: 0, ...counts });
     const quota = await cloud("/rest/v1/rpc/consume_tonight_request", {}, true);
     if (!quota.ok) return result(503, { error: "usage_unavailable" });
     if ((await quota.json()) !== true) return result(429, { error: "rate_limited" });
+    const titles = await discoverTonight(
+      context,
+      prefs,
+      catalog,
+      AbortSignal.any([deadline, AbortSignal.timeout(22000)]),
+    );
+    const candidates = titles.flatMap((title) => {
+      const compact = compactTitle(title);
+      return compact ? [{ ...compact, tasteEvidence: context.candidateTaste(compact) }] : [];
+    });
+    if (!candidates.length)
+      return result(200, { picks: [], titles: [], candidateCount: 0, ...counts });
     const picks = await generateTonightPicks(
       {
         preferences: { mood: prefs.mood, type: prefs.type, maxMinutes: prefs.maxMinutes },
         viewerCount: viewers.length,
+        ...counts,
+        taste: context.taste,
         candidates,
-        history,
+        history: context.evidence(candidates),
       },
       env.OPENAI_API_KEY,
+      deadline,
     );
-    return result(200, { picks, candidateCount: candidates.length });
+    return result(200, {
+      picks,
+      candidateCount: candidates.length,
+      ...counts,
+      titles: titles.filter((title) => picks.some((pick) => pick.key === title.key)),
+    });
   } catch {
     return result(502, { error: "recommendations_unavailable" });
   }
