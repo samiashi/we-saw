@@ -30,15 +30,16 @@ finishing any change. All five must pass; lint warnings are allowed but errors a
 
 ## Environment
 
-| Variable                        | Used by                      | Notes                                            |
-| ------------------------------- | ---------------------------- | ------------------------------------------------ |
-| `TMDB_API_KEY`                  | `server/catalog.js` (server) | Free key, themoviedb.org Settings → API          |
-| `OMDB_API_KEY`                  | `server/catalog.js` (server) | Free key, omdbapi.com/apikey.aspx                |
-| `VITE_SUPABASE_URL`             | browser                      | Required; absent ⇒ `SetupGate`                   |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | browser                      | `VITE_SUPABASE_ANON_KEY` also accepted; required |
-| `VITE_SITE_URL`                 | browser                      | OAuth redirect base; defaults to `window.origin` |
+| Variable                        | Used by                      | Notes                                                                  |
+| ------------------------------- | ---------------------------- | ---------------------------------------------------------------------- |
+| `TMDB_API_KEY`                  | `server/catalog.js` (server) | Free key, themoviedb.org Settings → API                                |
+| `OMDB_API_KEY`                  | `server/catalog.js` (server) | Free key, omdbapi.com/apikey.aspx                                      |
+| `OPENAI_API_KEY`                | server only                  | Optional AI picks; GPT-6.1 Sol, low reasoning; never prefix with VITE_ |
+| `VITE_SUPABASE_URL`             | browser                      | Required; absent ⇒ `SetupGate`                                         |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | browser                      | `VITE_SUPABASE_ANON_KEY` also accepted; required                       |
+| `VITE_SITE_URL`                 | browser                      | OAuth redirect base; defaults to `window.origin`                       |
 
-Never move `TMDB_API_KEY` / `OMDB_API_KEY` client-side. New third-party calls go through
+Never move `TMDB_API_KEY` / `OMDB_API_KEY` / `OPENAI_API_KEY` client-side. New third-party calls go through
 `server/catalog.js` and are exposed as `?action=` endpoints via `api/catalog.js` (Vercel) and the
 Vite dev middleware in `vite.config.ts`.
 
@@ -167,8 +168,8 @@ user-data tables must ship `household_id` and household-scoped policies in the s
 Migrations are applied to the linked Supabase project (the initial schema, `restrict_anon_execute`,
 `fix_tenant_scoping`, `unknown_watch_dates`, `validate_watchers`, `watch_seasons` and
 `picked_together`). They are append-only — add a
-new timestamped file for every change, never edit one that has been applied. Use `supabase db push`
-for remote changes and keep `supabase/.temp` untracked.
+new timestamped file for every change, never edit one that has been applied. Use `supabase db push --remote --yes`
+for remote changes (CLI v3 defaults to the local stack) and keep `supabase/.temp` untracked.
 
 ## Analytics and the taste engine
 
@@ -221,7 +222,7 @@ for remote changes and keep `supabase/.temp` untracked.
 - CI (`.github/workflows/ci.yml`): lint → format check → typecheck → test → build → bundle budget
   on Node `lts/*` and `latest`, plus a Lighthouse budget job.
 - Migrations (`.github/workflows/migrate.yml`): on merge to `main` touching `supabase/**`, runs
-  `supabase link` + `supabase db push`. Requires repo secrets `SUPABASE_ACCESS_TOKEN`,
+  `supabase link` + `supabase db push --remote --yes`. Requires repo secrets `SUPABASE_ACCESS_TOKEN`,
   `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF`; without them it skips with a notice. Migrations
   are idempotent, so re-applying over an existing database is safe.
 - Backups (`.github/workflows/backup.yml`): weekly and manual `supabase db dump` of the `public`
@@ -229,9 +230,13 @@ for remote changes and keep `supabase/.temp` untracked.
   Restore steps live in the README's Backups section.
 - There are 3 accepted `react-refresh/only-export-components` warnings (store + two component
   files). Do not silence them by weakening the rule config.
+- Node must satisfy `package.json` engines (`^22.22.2 || ^24.15.0 || >=26.0.0`), including the jsdom 31 minimum.
 - Dependency policy: keep npm packages and workflow actions on their latest releases. Two
   deliberate exceptions: TypeScript stays on `6.x` (typescript-eslint's peer range is `<6.1.0`), and
   `@types/node` tracks the newest Node even though CI runs LTS/latest runtimes.
+- `workbox-build` currently needs a scoped `glob: 14.0.6` override for upstream security fixes;
+  its own `^11` range cannot select the patched release. Remove the override when upstream fixes
+  the range. Validate PWA precache generation when changing it.
 
 ## Current status (September 2026 snapshot — update as you go)
 
@@ -265,6 +270,15 @@ fix pass also covered: unique realtime channel topics (a re-subscribe previously
 that was still leaving), load-generation guards and per-user ready state, optimistic `logWatch`
 merges, persisted-value rating rollback, `addToList` result states, air-date caching honesty, the
 missing TMDB TV genre 10765, search debounce races, and the queue/rewatch/affinity analytics fixes.
+
+Implemented November 2026: queue-based “Help us choose” with GPT-6.1 Sol at low reasoning,
+authenticated POST `action=tonight`, server-loaded household context, structured output validation,
+runtime/type filters, session skips, cancellation, and deterministic fallback. Private AI responses
+must never enter the public catalog CDN/service-worker caches. `tonight_usage` is a server-only
+household quota counter (20 attempts/UTC day, 8-second cooldown), written only by its authenticated
+RPC; it has no browser store collection or realtime subscription. The quota migration was applied
+and verified on the linked production project on 17 November 2026. New deployments still need it
+before enabling AI. See `docs/ai-tonight.md` for research, privacy, and rollout details.
 
 Not yet done, in rough priority order:
 

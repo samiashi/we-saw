@@ -1,3 +1,5 @@
+import { handleTonight } from "./tonight.js";
+
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const OMDB_BASE = "https://www.omdbapi.com/";
 const REQUEST_TIMEOUT_MS = 8000;
@@ -324,6 +326,9 @@ export async function handleCatalog({
   referer = null,
   host = null,
   secFetchSite = null,
+  method = "GET",
+  authorization = null,
+  body = null,
 } = {}) {
   const action = String(query.action ?? "health");
 
@@ -332,6 +337,7 @@ export async function handleCatalog({
   }
 
   try {
+    if (action === "tonight") return await handleTonight({ env, method, authorization, body });
     if (action === "health") {
       return json(200, {
         ok: true,

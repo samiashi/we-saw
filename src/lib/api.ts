@@ -1,4 +1,39 @@
-import type { CriticScores, MediaType, NextEpisode, Title, TitleSummary } from "@/lib/types";
+import type {
+  CriticScores,
+  MediaType,
+  NextEpisode,
+  Title,
+  TitleSummary,
+  TonightPreferences,
+  TonightResult,
+} from "@/lib/types";
+
+export async function fetchTonightPicks(
+  preferences: TonightPreferences,
+  accessToken: string,
+  signal: AbortSignal,
+): Promise<TonightResult> {
+  const response = await fetch("/api/catalog?action=tonight", {
+    method: "POST",
+    cache: "no-store",
+    signal,
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(preferences),
+  });
+  if (!response.ok) {
+    const messages: Record<number, string> = {
+      401: "Your session expired. Sign in again to get AI picks.",
+      403: "Join a household to get AI picks.",
+      429: "Please wait a moment before trying again. Each household has 20 requests per day.",
+      503: "AI picks are not available yet. Your usual taste ranking is below.",
+    };
+    throw new Error(
+      messages[response.status] ??
+        "AI picks are unavailable right now. Your usual taste ranking is below.",
+    );
+  }
+  return response.json();
+}
 
 export interface CatalogHealth {
   tmdb: boolean;

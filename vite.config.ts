@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { handleCatalog } from "./server/catalog.js";
+import { readJsonBody } from "./server/readJsonBody.js";
 
 function catalogDevApi(env: Record<string, string>): Plugin {
   return {
@@ -16,9 +17,31 @@ function catalogDevApi(env: Record<string, string>): Plugin {
         for (const [name, value] of url.searchParams) {
           query[name] = query[name] ? `${query[name]},${value}` : value;
         }
+        let body = null;
+        if (query.action === "tonight" && req.method === "POST") {
+          try {
+            body = await readJsonBody(req);
+          } catch {
+            res.statusCode = 400;
+            res.setHeader("content-type", "application/json");
+            res.setHeader("cache-control", "private, no-store");
+            res.end(JSON.stringify({ error: "invalid_body" }));
+            return;
+          }
+        }
         const result = await handleCatalog({
           query,
-          env: { TMDB_API_KEY: env.TMDB_API_KEY, OMDB_API_KEY: env.OMDB_API_KEY },
+          env: {
+            TMDB_API_KEY: env.TMDB_API_KEY,
+            OMDB_API_KEY: env.OMDB_API_KEY,
+            OPENAI_API_KEY: env.OPENAI_API_KEY,
+            VITE_SUPABASE_URL: env.VITE_SUPABASE_URL,
+            VITE_SUPABASE_PUBLISHABLE_KEY: env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            VITE_SUPABASE_ANON_KEY: env.VITE_SUPABASE_ANON_KEY,
+          },
+          body,
+          method: req.method,
+          authorization: req.headers.authorization ?? null,
           origin: req.headers.origin ?? null,
           referer: req.headers.referer ?? null,
           host: req.headers.host ?? null,
@@ -53,6 +76,17 @@ export default defineConfig(({ mode }) => {
           globPatterns: ["**/*.{js,css,html,svg,png,webmanifest}"],
           navigateFallback: "/index.html",
           runtimeCaching: [
+            {
+              urlPattern: ({ url }) =>
+                url.pathname === "/api/catalog" && url.searchParams.get("action") === "tonight",
+              handler: "NetworkOnly",
+              method: "POST",
+            },
+            {
+              urlPattern: ({ url }) =>
+                url.pathname === "/api/catalog" && url.searchParams.get("action") === "tonight",
+              handler: "NetworkOnly",
+            },
             {
               urlPattern: /\/img\//i,
               handler: "StaleWhileRevalidate",

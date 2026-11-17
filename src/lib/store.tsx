@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { buildEntries } from "@/lib/analytics";
+import { fetchTonightPicks } from "@/lib/api";
 import { retryWrite } from "@/lib/retry";
 import {
   emptyData,
@@ -42,12 +43,18 @@ import type {
   Title,
   Watch,
   WeSawData,
+  TonightPreferences,
+  TonightResult,
 } from "@/lib/types";
 
 export type AddToListResult = "added" | "exists" | "failed";
 
 export interface WeSawStore {
   ready: boolean;
+  requestTonightPicks: (
+    preferences: TonightPreferences,
+    signal: AbortSignal,
+  ) => Promise<TonightResult>;
   people: Person[];
   userId: string | null;
   household: Household | null;
@@ -780,6 +787,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }
 
   const value: WeSawStore = {
+    requestTonightPicks: async (preferences, signal) => {
+      const session = await supabase?.auth.getSession();
+      const token = session?.data.session?.access_token;
+      if (!token) throw new Error("Sign in to get AI picks.");
+      return fetchTonightPicks(preferences, token, signal);
+    },
     ready: userId != null && loadedUserId === userId,
     people,
     userId,

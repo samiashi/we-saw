@@ -17,7 +17,7 @@ jobs:
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: Check Supabase secrets
         id: check
         run: |
@@ -25,13 +25,13 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"
             echo "::notice title=Migration skipped::Set SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD and SUPABASE_PROJECT_REF repository secrets to enable automatic migrations."
           fi
-      - uses: supabase/setup-cli@v3
+      - uses: supabase/setup-cli@v3.2.0
         if: steps.check.outputs.skip != 'true'
         with:
-          version: latest
+          version: 3.2.0
       - name: Link project
         if: steps.check.outputs.skip != 'true'
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
       - name: Push migrations
         if: steps.check.outputs.skip != 'true'
-        run: supabase db push
+        run: supabase db push --remote --yes

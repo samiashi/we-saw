@@ -14,6 +14,7 @@ A shared movie and TV diary for couples and small groups: log what you watched, 
 - **Multi-household**: every group gets its own private data; friends start their own household with a friend-invite code you generate.
 - **Up Next** tab: queue titles, mark what's watching, and drop what you bailed on — logging a movie removes it, logging a TV run moves it to Watching.
 - **Tonight's pick**: a taste engine builds a genre/actor/director profile per person and ranks your list by the safer minimum score, with a reason line.
+- **Help us choose**: optional AI picks from Up Next, with mood shortcuts, movie/TV and time filters, brief reasons, and session-only skips. Uses GPT-6.1 Sol at low reasoning; the usual taste ranking remains available if AI is unavailable. [Research, privacy, and setup](docs/ai-tonight.md).
 - **Discover**: Popular this week and "Because you loved X" rows, with a _Safe for us_ toggle that ranks by the lower of your two predicted scores.
 - **Where to watch**: streaming and free providers for your country (JustWatch via TMDB) in discover and history sheets, plus **next-episode air dates** on TV shows in Up Next.
 - Choose who watched: **Together** or **Just me** — rating slots, waiting states and stats all follow the watchers.
@@ -56,13 +57,18 @@ OMDB_API_KEY=          # omdbapi.com/apikey.aspx (free, 1k/day)
 VITE_SUPABASE_URL=
 VITE_SUPABASE_PUBLISHABLE_KEY=
 VITE_SITE_URL=
+OPENAI_API_KEY=        # optional; server-only AI picks, never use a VITE_ prefix
 ```
 
 Without `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` the app shows a setup screen instead of the log.
 
+For AI picks, apply the `tonight_usage` migration and set `OPENAI_API_KEY` in Vercel before redeploying. The key stays on the server. Each household can make up to 20 requests per UTC day, at least eight seconds apart. Missing AI configuration or quota storage falls back to the existing taste ranking. [Setup and validation details](docs/ai-tonight.md).
+
 `npm run icons` regenerates the PWA icons from the same geometry as `public/icon.svg`, and `public/logo.svg` is the wordmark lockup (dependency-free PNG writer, no image deps). The mark is a coral-and-cream striped popcorn bucket topped with amber popcorn and two movie tickets.
 
 ## Checks & automation
+
+Use Node matching `package.json` engines (Node 22.22.2+, 24.15.0+, or 26+ on those supported lines). Dependencies and GitHub Actions were refreshed on 17 November 2026. TypeScript stays on 6.0.3 because `typescript-eslint` 8.73.0 supports `<6.1.0`. The scoped `workbox-build` override uses `glob` 14.0.6 to pick up fixes unavailable in Workbox's `^11` range; remove it when Workbox updates its dependency. See the [Glob advisory](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4).
 
 ```bash
 npm run lint          # ESLint (flat config: typescript-eslint + react-hooks, Prettier-compatible)
@@ -80,11 +86,13 @@ npm test              # Vitest
 - `SUPABASE_DB_PASSWORD` — the project's database password
 - `SUPABASE_PROJECT_REF` — the project ref from the dashboard URL
 
+The workflows use Supabase CLI v3: hosted database commands pass `--remote`, and unattended migration writes also pass `--yes`. A plain `supabase db push` now targets the local stack.
+
 Migrations are idempotent, so applying them over a database that already has some of the schema is safe, and without the secrets the workflow skips with a notice instead of failing. Prefer Supabase's own GitHub integration? Connect the repo under Project Settings → Integrations → GitHub and it applies migrations (and opens preview branches on PRs) without any workflow.
 
 ## Supabase (sync between both phones)
 
-1. Create a Supabase project and apply the migrations (either run `supabase/migrations/*.sql` in the SQL editor, `supabase db push` locally, or push to `main` and let the Migrate workflow do it).
+1. Create a Supabase project and apply the migrations (either run `supabase/migrations/*.sql` in the SQL editor, `supabase db push --remote --yes` from your linked checkout, or push to `main` and let the Migrate workflow do it).
 2. Enable Google as the only Auth provider and allow-list your deployed URL plus local dev in Auth URL settings.
 3. Sign in from one phone and choose **Start a household** — you become its first member. No SQL needed.
 4. Invite your partner from **Settings → Invite your partner**: generate a one-use code, she signs in with Google and redeems it on the join screen.

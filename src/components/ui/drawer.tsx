@@ -3,7 +3,10 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
 export const Drawer = DrawerPrimitive.Root;
+export const DrawerTrigger = DrawerPrimitive.Trigger;
 export const DrawerClose = DrawerPrimitive.Close;
+export const DrawerTitle = DrawerPrimitive.Title;
+export const DrawerDescription = DrawerPrimitive.Description;
 
 export function DrawerContent({
   className,
@@ -21,7 +24,10 @@ export function DrawerContent({
         {...props}
       >
         <div className="bg-surface-2 mx-auto h-1.5 w-12 shrink-0 rounded-full" />
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto overscroll-contain px-4">
+        <div
+          data-drawer-scroll-area
+          className="flex min-h-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto overscroll-contain px-4"
+        >
           {children}
         </div>
       </DrawerPrimitive.Content>

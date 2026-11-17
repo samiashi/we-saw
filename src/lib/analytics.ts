@@ -1227,6 +1227,22 @@ export function rankPicks(titles: Title[], profiles: TasteProfile[]): PickSugges
     .sort((a, b) => b.safeScore - a.safeScore || b.averageScore - a.averageScore);
 }
 
+export function filterTonightTitles(
+  titles: Title[],
+  preferences: { type: "all" | MediaType; maxMinutes: number | null; excluded: string[] },
+): Title[] {
+  const excluded = new Set(preferences.excluded);
+  return titles.filter(
+    (title) =>
+      !excluded.has(title.key) &&
+      (preferences.type === "all" || preferences.type === title.type) &&
+      (preferences.maxMinutes === null ||
+        (title.runtimeMinutes != null &&
+          title.runtimeMinutes > 0 &&
+          title.runtimeMinutes <= preferences.maxMinutes)),
+  );
+}
+
 export interface PredictionAccuracy {
   personId: string;
   count: number;

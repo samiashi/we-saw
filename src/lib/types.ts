@@ -1,5 +1,24 @@
 export type MediaType = "movie" | "tv";
 
+export interface TonightPreferences {
+  mood: string;
+  type: "all" | MediaType;
+  maxMinutes: number | null;
+  excluded: string[];
+}
+
+export interface TonightPick {
+  key: string;
+  reason: string;
+  caveat: string;
+  evidence: string[];
+}
+
+export interface TonightResult {
+  picks: TonightPick[];
+  candidateCount: number;
+}
+
 export interface SeasonInfo {
   seasonNumber: number;
   name: string;
