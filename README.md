@@ -75,13 +75,15 @@ npm run lint          # Oxlint defaults, React and type-aware checks; zero warni
 npm run lint:fix      # Oxlint safe fixes
 npm run format        # Oxfmt write, including Tailwind sorting
 npm run format:check  # Oxfmt check (used by CI)
-npm run typecheck     # tsc
+npm run typecheck     # tsc -b
 npm test              # Vitest
+npm run build         # Typecheck and production build
+npm run check:bundle  # Bundle budgets (run after build)
 ```
 
-`.github/workflows/ci.yml` runs lint, format check, typecheck, tests and build on every push and PR, across the active LTS and latest Node lines.
+`.github/workflows/ci.yml` runs lint, format check, typecheck, tests, build and bundle budgets on pushes to `main` and all pull requests, across the active LTS and latest Node lines. A separate job checks Lighthouse budgets.
 
-`.github/workflows/migrate.yml` applies `supabase/migrations` to the linked project whenever a PR lands on `main` (or manually via workflow dispatch). Add three repository secrets to enable it:
+`.github/workflows/migrate.yml` applies `supabase/migrations` to the linked project on pushes to `main` that change migration files or the migration workflow itself (or manually via workflow dispatch). Add three repository secrets to enable it:
 
 - `SUPABASE_ACCESS_TOKEN` — supabase.com/dashboard/account/tokens
 - `SUPABASE_DB_PASSWORD` — the project's database password

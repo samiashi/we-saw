@@ -22,7 +22,7 @@ least `TMDB_API_KEY` are required. Without Supabase config the app renders `Setu
 | `npm run lint`      | Oxlint defaults + React + type-aware checks (zero warnings)       |
 | `npm run format`    | Oxfmt write (`format:check` is what CI enforces)                  |
 | `npm run typecheck` | `tsc -b`                                                          |
-| `npm test`          | Vitest (`tests/**/*.test.ts`)                                     |
+| `npm test`          | Vitest (`tests/**/*.test.{ts,tsx}`)                               |
 | `npm run icons`     | Regenerates PWA PNGs from the geometry in `scripts/make-icon.mjs` |
 
 Run `npm run format && npm run lint && npm run typecheck && npm test && npm run build` before
@@ -126,7 +126,7 @@ Rules that keep this codebase coherent:
 - One component per file, file name = component name. PascalCase for `components/` and `views/`,
   camelCase for `lib/` and `hooks/`.
 - **All tests live in `tests/` at the repo root** — never beside the source. Vitest is scoped to
-  `tests/**/*.test.ts` in `vite.config.ts`, and the files import through the `@/` alias
+  `tests/**/*.test.{ts,tsx}` in `vite.config.ts`, and the files import through the `@/` alias
   (`tests/store-helpers.test.ts` covers `src/lib/store/helpers.ts`).
 - Sentence case everywhere: buttons, headings, labels, chips, captions and empty states all start
   with a capital letter ("Save watch", "On joint watches", "Leave-one-out", "Added by Sam").
@@ -224,8 +224,9 @@ for remote changes (CLI v3 defaults to the local stack) and keep `supabase/.temp
 ## Tooling / CI
 
 - CI (`.github/workflows/ci.yml`): lint → format check → typecheck → test → build → bundle budget
-  on Node `lts/*` and `latest`, plus a Lighthouse budget job.
-- Migrations (`.github/workflows/migrate.yml`): on merge to `main` touching `supabase/**`, runs
+  on Node `lts/*` and `latest`, plus a Lighthouse budget job. Runs on pushes to `main` and all pull requests.
+- Migrations (`.github/workflows/migrate.yml`): on pushes to `main` touching `supabase/migrations/**`
+  or the migration workflow itself, or manual dispatch, runs
   `supabase link` + `supabase db push --remote --yes`. Requires repo secrets `SUPABASE_ACCESS_TOKEN`,
   `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF`; without them it skips with a notice. Migrations
   are idempotent, so re-applying over an existing database is safe.
