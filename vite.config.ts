@@ -18,7 +18,7 @@ function catalogDevApi(env: Record<string, string>): Plugin {
           query[name] = query[name] ? `${query[name]},${value}` : value;
         }
         let body = null;
-        if (query.action === "tonight" && req.method === "POST") {
+        if (["tonight", "taste"].includes(query.action) && req.method === "POST") {
           try {
             body = await readJsonBody(req);
           } catch {
@@ -78,13 +78,15 @@ export default defineConfig(({ mode }) => {
           runtimeCaching: [
             {
               urlPattern: ({ url }) =>
-                url.pathname === "/api/catalog" && url.searchParams.get("action") === "tonight",
+                url.pathname === "/api/catalog" &&
+                ["tonight", "taste"].includes(url.searchParams.get("action") ?? ""),
               handler: "NetworkOnly",
               method: "POST",
             },
             {
               urlPattern: ({ url }) =>
-                url.pathname === "/api/catalog" && url.searchParams.get("action") === "tonight",
+                url.pathname === "/api/catalog" &&
+                ["tonight", "taste"].includes(url.searchParams.get("action") ?? ""),
               handler: "NetworkOnly",
             },
             {

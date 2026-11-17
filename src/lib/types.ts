@@ -163,3 +163,37 @@ export interface WeSawData {
   ratings: Rating[];
   listItems: ListItem[];
 }
+
+export interface TasteFilters {
+  scopeId: string;
+  year: string;
+  type: "all" | MediaType;
+}
+
+export interface TasteInsight {
+  title: string;
+  explanation: string;
+  metrics: {
+    id: string;
+    viewerId: string;
+    facet: string;
+    name: string;
+    count: number;
+    meanRating: number;
+  }[];
+  evidence: {
+    id: string;
+    name: string;
+    titleKey: string;
+    posterPath: string | null;
+    watchedOn: string | null;
+    ratings: Record<string, number>;
+  }[];
+}
+
+export interface TasteResult {
+  historyCount: number;
+  ratedCount: number;
+  missingMetadataCount: number;
+  insights: TasteInsight[];
+}

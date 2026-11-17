@@ -243,7 +243,7 @@ for remote changes (CLI v3 defaults to the local stack) and keep `supabase/.temp
   its own `^11` range cannot select the patched release. Remove the override when upstream fixes
   the range. Validate PWA precache generation when changing it.
 
-## Current status (September 2026 snapshot — update as you go)
+## Current status (November 2026 snapshot — update as you go)
 
 Shipped: per-person profiles (watchers + RLS), invite codes, **multi-household tenancy with
 invite-gated household creation**, Up Next with dropped tracking, year filters, Year in Review with
@@ -287,6 +287,17 @@ household quota counter (20 attempts/UTC day, 8-second cooldown), written only b
 RPC; it has no browser store collection or realtime subscription. The quota migration was applied
 and verified on the linked production project on 17 November 2026. New deployments still need it
 before enabling AI. See `docs/ai-tonight.md` for research, privacy, and rollout details.
+
+Implemented November 2026: Stats → Analyze my taste uses `action=taste` and GPT-6.1 Sol at low
+reasoning. `server/taste.js` verifies membership, reads all household history with keyset pagination,
+and applies the exact joint/solo, watch-year and movie/TV filters. `server/tasteContext.js` prepares
+bounded metric evidence from complete aggregates; `server/tasteModel.js` validates structured
+insight references. Never truncate the history read. Insights carry server-calculated values and
+supporting watches; model text does not define numeric stats. The UI resets on filters/data/identity
+changes. Discovery and analysis share the existing atomic quota; no new migration is needed.
+A bounded 15-minute server-memory cache is keyed by project/household/filters/history, after fresh
+authentication and data reads. Both AI actions must stay outside CDN/service-worker caching.
+See `docs/ai-taste.md` for exact semantics and validation.
 
 Not yet done, in rough priority order:
 

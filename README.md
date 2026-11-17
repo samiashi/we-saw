@@ -15,6 +15,7 @@ A shared movie and TV diary for couples and small groups: log what you watched, 
 - **Up Next** tab: queue titles, mark what's watching, and drop what you bailed on — logging a movie marks it Done, logging a TV run moves it to Watching.
 - **Tonight's pick**: a taste engine builds a genre/actor/director profile per person and ranks your list by the safer minimum score, with a reason line.
 - **Find something new**: AI discovery in the Log tab, based on your entire logged history and ratings — genres, actors, directors/TV creators, movies/shows, languages, countries, eras and runtimes. Finds unseen catalog titles without requiring Up Next, with optional mood/type/time filters, reasons, and session-only skips. Uses GPT-6.1 Sol at low reasoning. [Research, privacy, and setup](docs/ai-tonight.md).
+- **Analyze my taste**: in Stats, generate evidence-backed insights from all history matching the selected person/scope, watch year and movie/TV filters. Uses GPT-6.1 Sol at low reasoning, with separate per-person ratings and expandable supporting watches. [How it works](docs/ai-taste.md).
 - **Discover**: Popular this week and "Because you loved X" rows, with a _Safe for us_ toggle that ranks by the lower of your two predicted scores.
 - **Where to watch**: streaming and free providers for your country (JustWatch via TMDB) in discover and history sheets, plus **next-episode air dates** on TV shows in Up Next.
 - Choose who watched: **Together** or **Just me** — rating slots, waiting states and stats all follow the watchers.
@@ -62,7 +63,7 @@ OPENAI_API_KEY=        # optional; server-only AI picks, never use a VITE_ prefi
 
 Without `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` the app shows a setup screen instead of the log.
 
-For AI picks, apply the `tonight_usage` migration and set `OPENAI_API_KEY` in Vercel before redeploying. The key stays on the server. Each household can make up to 20 requests per UTC day, at least eight seconds apart. Missing AI configuration or quota storage shows an error without spending on a model request. [Setup and validation details](docs/ai-tonight.md).
+For AI picks, apply the `tonight_usage` migration and set `OPENAI_API_KEY` in Vercel before redeploying. The key stays on the server. AI picks and taste analysis share up to 20 requests per household per UTC day, at least eight seconds apart. Missing AI configuration or quota storage shows an error without spending on a model request. [Setup and validation details](docs/ai-tonight.md).
 
 `npm run icons` regenerates the PWA icons from the same geometry as `public/icon.svg`, and `public/logo.svg` is the wordmark lockup (dependency-free PNG writer, no image deps). The mark is a coral-and-cream striped popcorn bucket topped with amber popcorn and two movie tickets.
 

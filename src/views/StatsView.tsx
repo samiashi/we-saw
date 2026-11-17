@@ -1,3 +1,4 @@
+import { TasteAnalysisSection } from "@/components/stats/TasteAnalysisSection";
 import { lazy, Suspense, useMemo, useState } from "react";
 import { BarList } from "@/components/BarList";
 import { Button } from "@/components/ui/button";
@@ -97,6 +98,8 @@ export function StatsView() {
         onScope={setScopeId}
         jointCount={stats.joint.length}
       />
+
+      <TasteAnalysisSection filters={{ scopeId, year: yearFilter, type: typeFilter }} />
 
       {stats.pair && stats.compat && stats.compat.sharedCount > 0 ? (
         <TasteMatchSection compat={stats.compat} gaps={stats.gaps} pair={stats.pair} />

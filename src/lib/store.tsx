@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { StoreContext, type WeSawStore, type AddToListResult } from "@/lib/store/context";
 import { useAuth } from "@/hooks/useAuth";
 import { buildEntries } from "@/lib/analytics";
-import { fetchTonightPicks } from "@/lib/api";
+import { fetchTonightPicks, fetchTasteAnalysis } from "@/lib/api";
 import { retryWrite } from "@/lib/retry";
 import {
   emptyData,
@@ -726,6 +726,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }
 
   const value: WeSawStore = {
+    requestTasteAnalysis: async (filters, signal) => {
+      const session = await supabase?.auth.getSession();
+      const token = session?.data.session?.access_token;
+      if (!token) throw new Error("Sign in to analyze your taste.");
+      return fetchTasteAnalysis(filters, token, signal);
+    },
     requestTonightPicks: async (preferences, signal) => {
       const session = await supabase?.auth.getSession();
       const token = session?.data.session?.access_token;

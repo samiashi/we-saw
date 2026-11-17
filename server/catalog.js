@@ -1,3 +1,4 @@
+import { handleTaste } from "./taste.js";
 import { handleTonight } from "./tonight.js";
 
 const TMDB_BASE = "https://api.themoviedb.org/3";
@@ -346,10 +347,11 @@ export async function handleCatalog({
   const action = String(query.action ?? "health");
 
   if (action !== "health" && !isSameOriginRequest({ origin, referer, host, secFetchSite })) {
-    return json(403, { error: "forbidden" });
+    return json(403, { error: "forbidden" }, "private, no-store");
   }
 
   try {
+    if (action === "taste") return await handleTaste({ env, method, authorization, body });
     if (action === "tonight")
       return await handleTonight({
         env,

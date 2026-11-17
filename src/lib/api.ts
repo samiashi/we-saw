@@ -1,5 +1,7 @@
 import type {
   CriticScores,
+  TasteFilters,
+  TasteResult,
   MediaType,
   NextEpisode,
   Title,
@@ -30,6 +32,30 @@ export async function fetchTonightPicks(
     throw new Error(
       messages[response.status] ?? "AI discovery is unavailable right now. Please try again.",
     );
+  }
+  return response.json();
+}
+
+export async function fetchTasteAnalysis(
+  filters: TasteFilters,
+  accessToken: string,
+  signal: AbortSignal,
+): Promise<TasteResult> {
+  const response = await fetch("/api/catalog?action=taste", {
+    method: "POST",
+    cache: "no-store",
+    signal,
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(filters),
+  });
+  if (!response.ok) {
+    const messages: Record<number, string> = {
+      401: "Your session expired. Sign in again to analyze your taste.",
+      403: "These stats are no longer available to your account. Refresh and try again.",
+      429: "Please wait a moment before trying again. AI picks and taste analysis share 20 requests per household per day.",
+      503: "Taste analysis is not available yet. Please try again later.",
+    };
+    throw new Error(messages[response.status] ?? "Could not analyze your taste. Please try again.");
   }
   return response.json();
 }

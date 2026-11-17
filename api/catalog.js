@@ -5,7 +5,7 @@ export const maxDuration = 60;
 
 export default async function handler(request, response) {
   let body = null;
-  if (request.query?.action === "tonight" && request.method === "POST") {
+  if (["tonight", "taste"].includes(request.query?.action) && request.method === "POST") {
     try {
       body = await readJsonBody(request);
     } catch {

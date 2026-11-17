@@ -2,6 +2,8 @@ import { createContext } from "react";
 import type { useAuth } from "@/hooks/useAuth";
 import type {
   AppInvite,
+  TasteFilters,
+  TasteResult,
   Entry,
   Household,
   InviteCode,
@@ -18,6 +20,7 @@ export type AddToListResult = "added" | "exists" | "failed";
 
 export interface WeSawStore {
   ready: boolean;
+  requestTasteAnalysis: (filters: TasteFilters, signal: AbortSignal) => Promise<TasteResult>;
   requestTonightPicks: (
     preferences: TonightPreferences,
     signal: AbortSignal,
