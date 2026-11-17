@@ -112,8 +112,8 @@ Rules that keep this codebase coherent:
 - Keep `.oxlintrc.json` on Oxc’s default rules. Configure plugins/environment/options only; do not
   expand presets into individual rules or suppress diagnostics to pass checks.
 - Oxfmt uses default formatting options; its config only adds Tailwind sorting and ignored assets.
-- TypeScript `~6.0.3` remains the app build/typecheck compiler. Oxlint uses its own native
-  TypeScript engine through `oxlint-tsgolint` for type-aware linting.
+- TypeScript 7 is the app build/typecheck compiler. Keep it on the latest stable release.
+  Oxlint uses `oxlint-tsgolint` for type-aware linting.
 
 ## UI copy and file conventions
 
@@ -236,9 +236,8 @@ for remote changes (CLI v3 defaults to the local stack) and keep `supabase/.temp
   `src/lib/store/context.ts`, `useStore` in `src/hooks/useStore.ts`, and `scoreBand` in analytics,
   keeping component modules valid Fast Refresh boundaries.
 - Node must satisfy `package.json` engines (`^22.22.2 || ^24.15.0 || >=26.0.0`), including the jsdom 31 minimum.
-- Dependency policy: keep npm packages and workflow actions on their latest releases. Two
-  deliberate exceptions: the build compiler stays on `6.x` (compiler upgrades are separate from lint/format tooling), and
-  `@types/node` tracks the newest Node even though CI runs LTS/latest runtimes.
+- Dependency policy: keep npm packages (including TypeScript) and workflow actions on their
+  latest stable releases. `@types/node` tracks the newest Node even though CI runs LTS/latest runtimes.
 - `workbox-build` currently needs a scoped `glob: 14.0.6` override for upstream security fixes;
   its own `^11` range cannot select the patched release. Remove the override when upstream fixes
   the range. Validate PWA precache generation when changing it.
