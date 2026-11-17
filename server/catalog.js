@@ -160,6 +160,10 @@ async function title(query, env, signal) {
     name: type === "movie" ? data.title : data.name,
     year: yearOf(type === "movie" ? data.release_date : data.first_air_date),
     posterPath: data.poster_path ?? null,
+    voteAverage:
+      typeof data.vote_average === "number" && data.vote_average > 0
+        ? Math.round(data.vote_average * 10) / 10
+        : null,
     backdropPath: data.backdrop_path ?? null,
     overview: data.overview ?? "",
     genres: (data.genres ?? []).map((genre) => genre.name),

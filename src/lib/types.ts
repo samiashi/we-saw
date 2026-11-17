@@ -51,6 +51,7 @@ export interface Title {
   name: string;
   year: string | null;
   posterPath: string | null;
+  voteAverage?: number | null;
   backdropPath?: string | null;
   overview: string;
   genres: string[];

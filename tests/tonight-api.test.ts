@@ -107,6 +107,7 @@ function setup(
         return Response.json({
           id,
           title: title.name,
+          vote_average: 7.83,
           overview: title.overview,
           genres: [{ name: "Comedy" }],
           runtime: id === 1 ? 95 : id === 2 ? 150 : null,
@@ -170,7 +171,11 @@ describe("Tonight API", () => {
     const result = await handleCatalog(request);
     expect(result.status).toBe(200);
     expect(result.cacheControl).toContain("no-store");
-    expect(result.body).toMatchObject({ picks: [{ key: "movie:1" }], candidateCount: 1 });
+    expect(result.body).toMatchObject({
+      picks: [{ key: "movie:1" }],
+      candidateCount: 1,
+      titles: [{ key: "movie:1", voteAverage: 7.8 }],
+    });
     const sent = JSON.parse(calls.find((c) => c.url.includes("openai.com"))!.body);
     expect(sent).toMatchObject({
       model: "gpt-6.1-sol",

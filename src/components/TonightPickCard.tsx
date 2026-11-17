@@ -20,11 +20,11 @@ export function TonightPickCard({
   onSkip: () => void;
 }) {
   return (
-    <article className="flex gap-3 rounded-2xl border border-line bg-surface-2/50 p-3.5">
-      <Poster title={title} variant="small" />
-      <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
-        <div className="flex w-full items-start justify-between gap-2">
-          <div>
+    <article className="flex flex-col gap-3 rounded-2xl border border-line bg-surface-2/50 p-3.5">
+      <div className="flex items-start gap-3">
+        <Poster title={title} className="h-30 w-20 self-start sm:h-36 sm:w-24" />
+        <div className="flex min-w-0 flex-1 items-start justify-between gap-2">
+          <div className="min-w-0 break-words">
             <p className="mb-1 text-xs font-medium text-accent">
               {index === 0 ? "First choice" : `Another option · ${index + 1}`}
             </p>
@@ -36,6 +36,15 @@ export function TonightPickCard({
                 ? ` · ${formatMinutes(title.runtimeMinutes)}${title.type === "tv" ? " / episode" : ""}`
                 : " · Runtime unknown"}
             </p>
+            <div className="mt-2">
+              {title.voteAverage != null && title.voteAverage > 0 ? (
+                <span className="inline-flex rounded-full border border-line px-2.5 py-0.5 text-xs text-ink">
+                  TMDB {title.voteAverage}/10
+                </span>
+              ) : (
+                <span className="text-xs text-muted">TMDB rating unavailable</span>
+              )}
+            </div>
           </div>
           <Button
             variant="ghost"
@@ -47,6 +56,8 @@ export function TonightPickCard({
             <X size={16} />
           </Button>
         </div>
+      </div>
+      <div className="flex flex-col items-start gap-2">
         <p className="text-sm leading-relaxed text-ink/90">{pick.reason}</p>
         {evidence.length ? (
           <p className="text-xs text-muted">Based on your ratings of {evidence.join(" and ")}.</p>

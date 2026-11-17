@@ -15,6 +15,7 @@ const title = {
   cast: [],
   seasons: [],
   posterPath: null,
+  voteAverage: 7.8,
   year: "2020",
 } as unknown as Title;
 const props = { history: [], people: [], onOpen: vi.fn() };
@@ -92,6 +93,7 @@ describe("Tonight picker", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Find picks" }));
     await screen.findByText("From your history");
+    expect(screen.getByText("TMDB 7.8/10")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("205 logged watches (180 rated)");
     fireEvent.click(screen.getByRole("button", { name: "View title" }));
     expect(onOpen).toHaveBeenCalledWith(title);

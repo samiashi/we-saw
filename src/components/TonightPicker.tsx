@@ -6,6 +6,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { TonightPickCard } from "@/components/TonightPickCard";
 import { useTonightPicks } from "@/hooks/useTonightPicks";
+import { cn } from "@/lib/utils";
 import type { Entry, Person, Title, TonightPreferences, TonightResult } from "@/lib/types";
 
 const moods = [
@@ -39,7 +40,7 @@ export function TonightPicker({
     excluded,
   };
   const state = useTonightPicks({ history, people, preferences, generate });
-  const statusRef = useRef<HTMLParagraphElement>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const status = statusRef.current;
     const area = status?.closest<HTMLElement>("[data-drawer-scroll-area]");
@@ -152,42 +153,40 @@ export function TonightPicker({
           </Button>
         ) : null}
       </div>
-      <p className="text-xs leading-relaxed text-muted">
-        Uses OpenAI with taste patterns from your full history, selected rated examples, catalog
-        details, and your request. Each person’s ratings stay separate. Diary notes and account
-        details stay out. AI suggestions can miss the mark; review title details for anything you
-        need to avoid.
-      </p>
-      <p
-        ref={statusRef}
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-        className="scroll-mt-16 text-sm text-muted empty:hidden"
-      >
-        {status}
-      </p>
-      {excluded.length ? (
-        <Button variant="ghost" size="sm" className="self-start" onClick={() => setExcluded([])}>
-          Reset skipped titles
-        </Button>
-      ) : null}
-      {state.picks.map((pick, index) => {
-        const title = state.titles.find((title) => title.key === pick.key);
-        return title ? (
-          <TonightPickCard
-            key={pick.key}
-            title={title}
-            pick={pick}
-            index={index}
-            evidence={pick.evidence
-              .map((key) => historyNames.get(key))
-              .filter((name): name is string => Boolean(name))}
-            onOpen={() => onOpen(title)}
-            onSkip={() => setExcluded((current) => [...current, pick.key].slice(-100))}
-          />
-        ) : null;
-      })}
+      <div ref={statusRef} className="flex flex-col gap-4">
+        <p
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          className={cn(
+            "scroll-mt-16 text-sm text-muted empty:hidden",
+            !state.error && (state.loading || state.picks.length > 0) && "sr-only",
+          )}
+        >
+          {status}
+        </p>
+        {excluded.length ? (
+          <Button variant="ghost" size="sm" className="self-start" onClick={() => setExcluded([])}>
+            Reset skipped titles
+          </Button>
+        ) : null}
+        {state.picks.map((pick, index) => {
+          const title = state.titles.find((title) => title.key === pick.key);
+          return title ? (
+            <TonightPickCard
+              key={pick.key}
+              title={title}
+              pick={pick}
+              index={index}
+              evidence={pick.evidence
+                .map((key) => historyNames.get(key))
+                .filter((name): name is string => Boolean(name))}
+              onOpen={() => onOpen(title)}
+              onSkip={() => setExcluded((current) => [...current, pick.key].slice(-100))}
+            />
+          ) : null;
+        })}
+      </div>
     </div>
   );
 }
