@@ -25,7 +25,7 @@ export function ActivityHeatmap({ entries, weeks = 53 }: { entries: Entry[]; wee
         {grid.map((week, weekIndex) => (
           <div key={week.days[0]?.date ?? weekIndex} className="relative flex flex-col gap-[3px]">
             {week.monthLabel ? (
-              <span className="text-muted absolute -top-4 left-0 text-[10px] whitespace-nowrap">
+              <span className="absolute -top-4 left-0 text-[10px] whitespace-nowrap text-muted">
                 {week.monthLabel}
               </span>
             ) : null}
@@ -46,7 +46,7 @@ export function ActivityHeatmap({ entries, weeks = 53 }: { entries: Entry[]; wee
           </div>
         ))}
       </div>
-      <div className="text-muted flex items-center justify-between text-[11px]">
+      <div className="flex items-center justify-between text-[11px] text-muted">
         <span>{activeDays} active days</span>
         <span className="flex items-center gap-1">
           Less

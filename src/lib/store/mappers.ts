@@ -11,7 +11,10 @@ import type {
 type Row = Record<string, unknown>;
 
 export function mapPerson(row: Row): Person {
-  return { id: String(row.user_id), name: String(row.display_name || "Member") };
+  return {
+    id: String(row.user_id),
+    name: (typeof row.display_name === "string" && row.display_name) || "Member",
+  };
 }
 
 export function mapHousehold(row: Row): { id: string; name: string } {
@@ -28,8 +31,8 @@ export function mapWatch(row: Row, memberIds: string[]): Watch {
     id: String(row.id),
     titleKey: String(row.title_id),
     seasonNumbers: mapSeasons(row.seasons),
-    watchedOn: row.watched_on == null ? null : String(row.watched_on),
-    note: String(row.note ?? ""),
+    watchedOn: typeof row.watched_on === "string" ? row.watched_on : null,
+    note: typeof row.note === "string" ? row.note : "",
     watchers:
       Array.isArray(row.watchers) && row.watchers.length ? (row.watchers as string[]) : memberIds,
     pickedBy: (row.picked_by as string | null) ?? null,

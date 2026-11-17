@@ -7,3 +7,5 @@ dist
 supabase/.temp
 .DS_Store
 *.tsbuildinfo
+
+.vscode/

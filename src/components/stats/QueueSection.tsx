@@ -14,7 +14,7 @@ export function QueueSection({
     <section className="flex flex-col gap-2.5">
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="text-[17px] font-semibold">Queue health</h2>
-        <span className="text-muted text-[13px]">All time</span>
+        <span className="text-[13px] text-muted">All time</span>
       </div>
       {hasItems ? (
         <>
@@ -35,14 +35,14 @@ export function QueueSection({
               format={(value) => `${Math.round(value)}%`}
             />
           </div>
-          <p className="text-muted text-[13px]">
+          <p className="text-[13px] text-muted">
             {oldestName ? `Longest wait: ${oldestName}. ` : ""}
             {queue.finished} finished · {queue.dropped} dropped · {queue.queued} queued ·{" "}
             {queue.watching} in progress
           </p>
         </>
       ) : (
-        <p className="text-muted text-[13px]">Nothing on the list yet.</p>
+        <p className="text-[13px] text-muted">Nothing on the list yet.</p>
       )}
     </section>
   );

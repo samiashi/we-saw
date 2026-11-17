@@ -13,7 +13,7 @@ import {
   type Prediction,
 } from "@/lib/analytics";
 import { fetchAirdates, titleToSummary } from "@/lib/api";
-import { useStore } from "@/lib/store";
+import { useStore } from "@/hooks/useStore";
 import { useToast } from "@/hooks/useToast";
 import type { ListItem, ListStatus, NextEpisode, Title, TitleSummary } from "@/lib/types";
 
@@ -106,14 +106,14 @@ export function UpNextView() {
     <div className="flex flex-col gap-[18px]">
       <header>
         <h1 className="text-[26px] font-bold tracking-tight">Up Next</h1>
-        <p className="text-muted mt-1 text-sm">What's lined up, in progress, or abandoned.</p>
+        <p className="mt-1 text-sm text-muted">What's lined up, in progress, or abandoned.</p>
       </header>
 
       {tonight ? (
-        <section className="border-accent/35 bg-surface flex flex-col gap-3 rounded-2xl border p-4">
+        <section className="flex flex-col gap-3 rounded-2xl border border-accent/35 bg-surface p-4">
           <div className="flex items-baseline justify-between gap-2">
             <h2 className="text-[17px] font-semibold">Tonight's pick</h2>
-            <span className="text-muted inline-flex items-center gap-1 text-[13px]">
+            <span className="inline-flex items-center gap-1 text-[13px] text-muted">
               <Sparkles size={12} /> Safe for both
             </span>
           </div>
@@ -121,7 +121,7 @@ export function UpNextView() {
             <Poster title={tonight.title} size="w342" />
             <div className="flex min-w-0 flex-col items-start gap-2">
               <h3 className="text-lg font-semibold">{tonight.title.name}</h3>
-              <p className="text-muted text-[13px]">{pickReason}</p>
+              <p className="text-[13px] text-muted">{pickReason}</p>
               <PredictionChips predictions={tonight.predictions} />
               <Button size="sm" onClick={() => setSelected(titleToSummary(tonight.title))}>
                 <Play size={14} /> Log this watch
@@ -132,7 +132,7 @@ export function UpNextView() {
       ) : null}
 
       {!resolved.length ? (
-        <p className="text-muted text-[13px]">
+        <p className="text-[13px] text-muted">
           Nothing on the list yet. Search in the Log tab and tap the bookmark to add something.
         </p>
       ) : null}
@@ -142,7 +142,7 @@ export function UpNextView() {
           <section key={group.status} className="flex flex-col gap-2.5">
             <div className="flex items-baseline justify-between gap-2">
               <h2 className="text-[17px] font-semibold">{statusLabels[group.status]}</h2>
-              <span className="text-muted text-[13px]">{group.rows.length}</span>
+              <span className="text-[13px] text-muted">{group.rows.length}</span>
             </div>
             <div className="grid auto-rows-fr grid-cols-1 gap-2">
               {group.rows.map(({ item, title }) => (

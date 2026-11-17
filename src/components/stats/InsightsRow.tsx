@@ -8,7 +8,7 @@ export function InsightsRow({ insights }: { insights: Insight[] }) {
       {insights.map((insight) => (
         <div
           key={insight.id}
-          className="border-accent/30 bg-accent/6 max-w-[280px] min-w-[220px] shrink-0 rounded-2xl border p-3.5 text-[13.5px] leading-snug"
+          className="max-w-[280px] min-w-[220px] shrink-0 rounded-2xl border border-accent/30 bg-accent/6 p-3.5 text-[13.5px] leading-snug"
         >
           {insight.text}
         </div>

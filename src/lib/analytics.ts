@@ -1305,3 +1305,9 @@ export function formatMinutes(minutes: number): string {
   if (rest) return `${days}d ${rest}m`;
   return `${days}d`;
 }
+
+export function scoreBand(score: number): "low" | "mid" | "high" {
+  if (score <= 4) return "low";
+  if (score <= 7) return "mid";
+  return "high";
+}

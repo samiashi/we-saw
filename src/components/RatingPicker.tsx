@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { scoreBand } from "@/components/ScoreChip";
+import { scoreBand } from "@/lib/analytics";
 
 const pillFills = {
   low: "border-transparent bg-bad/75 text-[#2a0f0c]",
@@ -27,9 +27,9 @@ export function RatingPicker({
             key={score}
             type="button"
             className={cn(
-              "border-line bg-surface text-muted h-10 rounded-lg border text-[13px] font-semibold transition-colors",
+              "h-10 rounded-lg border border-line bg-surface text-[13px] font-semibold text-muted transition-colors",
               filled && pillFills[scoreBand(score)],
-              value === score && "ring-ink/80 ring-2",
+              value === score && "ring-2 ring-ink/80",
               disabled && "cursor-default opacity-45",
               disabled && filled && "opacity-70",
             )}

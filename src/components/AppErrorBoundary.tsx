@@ -6,20 +6,20 @@ function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-6">
-      <div className="border-line bg-surface flex w-full max-w-[420px] flex-col items-center gap-4 rounded-[20px] border p-6 text-center">
+      <div className="flex w-full max-w-[420px] flex-col items-center gap-4 rounded-[20px] border border-line bg-surface p-6 text-center">
         <h1 className="text-xl font-bold">Something broke</h1>
-        <p className="text-muted text-sm">{message}</p>
+        <p className="text-sm text-muted">{message}</p>
         <div className="flex flex-wrap justify-center gap-2">
           <button
             type="button"
-            className="bg-accent text-accent-ink hover:bg-accent/90 h-11 rounded-xl px-4 text-sm font-semibold transition-colors"
+            className="h-11 rounded-xl bg-accent px-4 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent/90"
             onClick={resetErrorBoundary}
           >
             Try again
           </button>
           <button
             type="button"
-            className="border-line hover:bg-surface-2 h-11 rounded-xl border px-4 text-sm font-semibold transition-colors"
+            className="h-11 rounded-xl border border-line px-4 text-sm font-semibold transition-colors hover:bg-surface-2"
             onClick={() => window.location.reload()}
           >
             Reload

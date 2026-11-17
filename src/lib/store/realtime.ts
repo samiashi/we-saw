@@ -11,9 +11,9 @@ export function createRealtimeHandlers({
 }) {
   const handleRating = (payload: ChangePayload) => {
     if (payload.eventType === "DELETE") {
-      const watchId = String(payload.old?.watch_id ?? "");
-      const targetUser = String(payload.old?.user_id ?? "");
-      if (!watchId) {
+      const watchId = typeof payload.old?.watch_id === "string" ? payload.old.watch_id : "";
+      const targetUser = typeof payload.old?.user_id === "string" ? payload.old.user_id : "";
+      if (!watchId || !targetUser) {
         schedule();
         return;
       }
@@ -38,7 +38,7 @@ export function createRealtimeHandlers({
 
   const handleWatch = (payload: ChangePayload) => {
     if (payload.eventType === "DELETE") {
-      const id = String(payload.old?.id ?? "");
+      const id = typeof payload.old?.id === "string" ? payload.old.id : "";
       if (!id) {
         schedule();
         return;
@@ -59,8 +59,8 @@ export function createRealtimeHandlers({
         Array.isArray(row.seasons) && row.seasons.length
           ? (row.seasons as number[]).map(Number).sort((a, b) => a - b)
           : null,
-      watchedOn: row.watched_on == null ? null : String(row.watched_on),
-      note: String(row.note ?? ""),
+      watchedOn: typeof row.watched_on === "string" ? row.watched_on : null,
+      note: typeof row.note === "string" ? row.note : "",
       watchers: (row.watchers as string[] | null) ?? [],
       pickedBy: (row.picked_by as string | null) ?? null,
       pickedTogether: Boolean(row.picked_together),
@@ -75,7 +75,7 @@ export function createRealtimeHandlers({
 
   const handleListItem = (payload: ChangePayload) => {
     if (payload.eventType === "DELETE") {
-      const id = String(payload.old?.id ?? "");
+      const id = typeof payload.old?.id === "string" ? payload.old.id : "";
       if (!id) {
         schedule();
         return;

@@ -1,7 +1,7 @@
 import { LogoLockup } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { readInviteCode } from "@/lib/invite";
-import { useStore } from "@/lib/store";
+import { useStore } from "@/hooks/useStore";
 
 export function SignInGate() {
   const { auth } = useStore();
@@ -9,16 +9,16 @@ export function SignInGate() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-6">
-      <div className="border-line bg-surface flex w-full max-w-[420px] flex-col items-center gap-4 rounded-[20px] border p-7 text-center">
+      <div className="flex w-full max-w-[420px] flex-col items-center gap-4 rounded-[20px] border border-line bg-surface p-7 text-center">
         <LogoLockup />
         {invited ? (
-          <p className="text-good text-sm font-medium">
+          <p className="text-sm font-medium text-good">
             You've been invited — sign in to join the household.
           </p>
         ) : (
-          <p className="text-muted text-sm">A shared movie and TV diary for the two of you.</p>
+          <p className="text-sm text-muted">A shared movie and TV diary for the two of you.</p>
         )}
-        <ul className="text-muted flex flex-col gap-1.5 text-left text-[13px]">
+        <ul className="flex flex-col gap-1.5 text-left text-[13px] text-muted">
           <li>Rate what you watch together — 1 to 10 each</li>
           <li>Taste match, streaks and a year in review</li>
           <li>Private: only your household sees your data</li>
@@ -30,7 +30,7 @@ export function SignInGate() {
         >
           Continue with Google
         </Button>
-        {auth.authMessage ? <p className="text-bad text-sm">{auth.authMessage}</p> : null}
+        {auth.authMessage ? <p className="text-sm text-bad">{auth.authMessage}</p> : null}
       </div>
     </div>
   );

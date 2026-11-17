@@ -19,7 +19,7 @@ export function DrillDrawer({
     <Drawer open onOpenChange={(open) => (!open ? onClose() : undefined)}>
       <DrawerContent aria-label={`${genre} watches`}>
         <header className="flex items-center justify-between">
-          <span className="text-muted text-xs tracking-[0.08em] uppercase">{genre}</span>
+          <span className="text-xs tracking-[0.08em] text-muted uppercase">{genre}</span>
           <Button variant="ghost" size="sm" onClick={onClose}>
             Close
           </Button>
@@ -29,7 +29,7 @@ export function DrillDrawer({
             {entries.map((entry) => (
               <div
                 key={entry.watch.id}
-                className="border-line bg-surface flex items-center gap-3 rounded-2xl border p-3"
+                className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-3"
               >
                 <Poster title={entry.title} variant="small" />
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -37,7 +37,7 @@ export function DrillDrawer({
                     {entry.title.name}
                     {seasonLabel(entry) ? ` · ${seasonLabel(entry)}` : ""}
                   </span>
-                  <span className="text-muted text-xs">
+                  <span className="text-xs text-muted">
                     {formatWatchDate(entry.watch.watchedOn)}
                   </span>
                 </div>
@@ -53,7 +53,7 @@ export function DrillDrawer({
             ))}
           </div>
         ) : (
-          <p className="text-muted text-[13px]">Nothing in this genre for the current filters.</p>
+          <p className="text-[13px] text-muted">Nothing in this genre for the current filters.</p>
         )}
       </DrawerContent>
     </Drawer>

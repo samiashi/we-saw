@@ -16,10 +16,10 @@ export function FilterChip({
     <button
       type="button"
       className={cn(
-        "border-line text-muted rounded-full border transition-colors",
+        "rounded-full border border-line text-muted transition-colors",
         small ? "px-2.5 py-1 text-xs" : "px-3.5 py-1.5 text-[13px]",
         active &&
-          (small ? "border-accent bg-accent/8 text-ink" : "bg-surface-2 border-accent text-ink"),
+          (small ? "border-accent bg-accent/8 text-ink" : "border-accent bg-surface-2 text-ink"),
         className,
       )}
       {...props}

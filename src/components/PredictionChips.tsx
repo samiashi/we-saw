@@ -1,4 +1,4 @@
-import { useStore } from "@/lib/store";
+import { useStore } from "@/hooks/useStore";
 import type { Prediction } from "@/lib/analytics";
 
 export function PredictionChips({ predictions }: { predictions: Prediction[] }) {

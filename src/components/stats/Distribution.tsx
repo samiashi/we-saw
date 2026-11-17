@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { scoreBand } from "@/components/ScoreChip";
+import { scoreBand } from "@/lib/analytics";
 
 export function Distribution({ buckets }: { buckets: { score: number; count: number }[] }) {
   const max = Math.max(1, ...buckets.map((bucket) => bucket.count));
@@ -12,7 +12,7 @@ export function Distribution({ buckets }: { buckets: { score: number; count: num
           className="flex h-full flex-1 flex-col items-center gap-1.5"
           title={`${bucket.score}: ${bucket.count}`}
         >
-          <div className="border-line bg-surface flex w-full flex-1 items-end overflow-hidden rounded-md border">
+          <div className="flex w-full flex-1 items-end overflow-hidden rounded-md border border-line bg-surface">
             <div
               className={cn(
                 "w-full rounded-t-md",
@@ -23,7 +23,7 @@ export function Distribution({ buckets }: { buckets: { score: number; count: num
               style={{ height: `${(bucket.count / max) * 100}%`, minHeight: 2 }}
             />
           </div>
-          <span className="text-muted text-[10.5px]">{bucket.score}</span>
+          <span className="text-[10.5px] text-muted">{bucket.score}</span>
         </div>
       ))}
     </div>

@@ -19,7 +19,7 @@ import { TasteShapeSection } from "@/components/stats/TasteShapeSection";
 import { TrendSection, type TrendMetric } from "@/components/stats/TrendSection";
 import { useStatsData } from "@/hooks/useStatsData";
 import { useTitleEnrichment } from "@/hooks/useTitleEnrichment";
-import { useStore } from "@/lib/store";
+import { useStore } from "@/hooks/useStore";
 
 const ReviewView = lazy(() =>
   import("@/views/ReviewView").then((module) => ({ default: module.ReviewView })),
@@ -33,10 +33,11 @@ export function StatsView() {
   const [trendMetric, setTrendMetric] = useState<TrendMetric>("count");
   const [drillGenre, setDrillGenre] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [currentYear] = useState(() => String(new Date().getFullYear()));
 
   const stats = useStatsData({ scopeId, yearFilter, typeFilter });
   const enrichment = useTitleEnrichment();
-  const reviewYear = yearFilter === "all" ? String(new Date().getFullYear()) : yearFilter;
+  const reviewYear = yearFilter === "all" ? currentYear : yearFilter;
   const drillEntries = useMemo(
     () =>
       drillGenre ? stats.filtered.filter((entry) => entry.title.genres.includes(drillGenre)) : [],
@@ -65,7 +66,7 @@ export function StatsView() {
         <header>
           <h1 className="text-[26px] font-bold tracking-tight">Stats</h1>
         </header>
-        <p className="text-muted text-[13px]">
+        <p className="text-[13px] text-muted">
           Log a few watches and the analytics will appear here.
         </p>
       </div>
@@ -77,7 +78,7 @@ export function StatsView() {
       <header className="flex items-baseline justify-between gap-2">
         <div>
           <h1 className="text-[26px] font-bold tracking-tight">Stats</h1>
-          <p className="text-muted mt-1 text-sm">Joint watches and solo habits, kept apart.</p>
+          <p className="mt-1 text-sm text-muted">Joint watches and solo habits, kept apart.</p>
         </div>
         <Button variant="ghost" size="sm" onClick={() => setReviewOpen(true)}>
           {reviewYear} in Review
@@ -179,7 +180,7 @@ export function StatsView() {
           </section>
         </>
       ) : (
-        <p className="text-muted text-[13px]">
+        <p className="text-[13px] text-muted">
           {scopeId === "together"
             ? 'No joint watches yet — log one with "Together" selected.'
             : `No solo watches logged for ${nameFor(scopeId)} yet.`}

@@ -1,10 +1,5 @@
+import { scoreBand } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
-
-export function scoreBand(score: number): "low" | "mid" | "high" {
-  if (score <= 4) return "low";
-  if (score <= 7) return "mid";
-  return "high";
-}
 
 const chipColors = {
   low: "border-bad/45 bg-bad/15 text-[#ffb0a6]",
@@ -15,7 +10,7 @@ const chipColors = {
 export function ScoreChip({ score, label }: { score: number | null | undefined; label?: string }) {
   if (score == null) {
     return (
-      <span className="border-line text-muted inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11.5px] whitespace-nowrap">
+      <span className="inline-flex items-center rounded-full border border-line px-2.5 py-0.5 text-[11.5px] whitespace-nowrap text-muted">
         {label ? `${label} —` : "—"}
       </span>
     );

@@ -68,7 +68,7 @@ export function TonightPicker({
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-muted text-sm leading-relaxed">
+      <p className="text-sm leading-relaxed text-muted">
         Discover movies and shows through your full watch history: ratings, genres, actors,
         directors and more. Add a mood if you have one.
       </p>
@@ -123,12 +123,12 @@ export function TonightPicker({
             </Select>
           </label>
         </div>
-        <p className="text-muted -mt-2 text-xs">
+        <p className="-mt-2 text-xs text-muted">
           For TV, time means one episode. Unknown runtimes are excluded when you set a limit.
         </p>
         <label className="flex flex-col gap-2 text-sm" htmlFor="tonight-details">
           Anything else?{" "}
-          <span className="text-muted text-xs">
+          <span className="text-xs text-muted">
             Optional — a mood, theme, or something to avoid
           </span>
           <Textarea
@@ -152,7 +152,7 @@ export function TonightPicker({
           </Button>
         ) : null}
       </div>
-      <p className="text-muted text-xs leading-relaxed">
+      <p className="text-xs leading-relaxed text-muted">
         Uses OpenAI with taste patterns from your full history, selected rated examples, catalog
         details, and your request. Each person’s ratings stay separate. Diary notes and account
         details stay out. AI suggestions can miss the mark; review title details for anything you
@@ -163,7 +163,7 @@ export function TonightPicker({
         role="status"
         aria-live="polite"
         aria-atomic="true"
-        className="text-muted scroll-mt-16 text-sm empty:hidden"
+        className="scroll-mt-16 text-sm text-muted empty:hidden"
       >
         {status}
       </p>

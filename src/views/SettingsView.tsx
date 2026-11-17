@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/useToast";
 import { catalogHealth, type CatalogHealth } from "@/lib/api";
 import { copyText } from "@/lib/clipboard";
 import { getRegion, REGIONS, setRegion } from "@/lib/region";
-import { useStore } from "@/lib/store";
+import { useStore } from "@/hooks/useStore";
 import { getTheme, setTheme, type ThemeName } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
@@ -32,10 +32,10 @@ function Section({
 
 function StatusRow({ on, label, detail }: { on: boolean; label: string; detail: string }) {
   return (
-    <div className="border-line bg-surface flex items-center gap-2.5 rounded-xl border px-3.5 py-3 text-sm">
+    <div className="flex items-center gap-2.5 rounded-xl border border-line bg-surface px-3.5 py-3 text-sm">
       <span className={cn("size-2.5 shrink-0 rounded-full", on ? "bg-good" : "bg-bad")} />
       <span className="flex-1">{label}</span>
-      <span className="text-muted text-[13px]">{detail}</span>
+      <span className="text-[13px] text-muted">{detail}</span>
     </div>
   );
 }
@@ -138,7 +138,7 @@ export function SettingsView() {
           const editable = person.id === userId;
           return (
             <div key={person.id} className="flex flex-col gap-2">
-              <label className="text-muted text-[13px]">
+              <label className="text-[13px] text-muted">
                 {editable ? "Name" : `${nameFor(person.id)} (partner)`}
               </label>
               <Input
@@ -157,7 +157,7 @@ export function SettingsView() {
       {household ? (
         <Section title="Household">
           <div className="flex flex-col gap-2">
-            <label className="text-muted text-[13px]" htmlFor="household-name">
+            <label className="text-[13px] text-muted" htmlFor="household-name">
               Household name
             </label>
             <Input
@@ -178,11 +178,11 @@ export function SettingsView() {
       <Section title="Invite your partner">
         {activeInvite ? (
           <>
-            <p className="text-muted text-[13px]">
+            <p className="text-[13px] text-muted">
               Share the link or the code — she signs in with Google and joins automatically. One use
               only.
             </p>
-            <code className="bg-bg border-line text-accent block w-full rounded-xl border p-3 text-center font-mono text-2xl font-bold tracking-[0.28em]">
+            <code className="block w-full rounded-xl border border-line bg-bg p-3 text-center font-mono text-2xl font-bold tracking-[0.28em] text-accent">
               {activeInvite.code}
             </code>
             <div className="flex flex-wrap gap-2">
@@ -199,7 +199,7 @@ export function SettingsView() {
           </>
         ) : (
           <>
-            <p className="text-muted text-[13px]">
+            <p className="text-[13px] text-muted">
               No active invite. Generate a one-use code for your partner.
             </p>
             <div className="flex flex-wrap gap-2">
@@ -210,13 +210,13 @@ export function SettingsView() {
       </Section>
 
       <Section title="Invite a friend">
-        <p className="text-muted text-[13px]">
+        <p className="text-[13px] text-muted">
           Give a friend this code so they can start their own household. Households never see each
           other's watches or ratings.
         </p>
         {activeAppInvite ? (
           <>
-            <code className="bg-bg border-line text-accent block w-full rounded-xl border p-3 text-center font-mono text-2xl font-bold tracking-[0.28em]">
+            <code className="block w-full rounded-xl border border-line bg-bg p-3 text-center font-mono text-2xl font-bold tracking-[0.28em] text-accent">
               {activeAppInvite.code}
             </code>
             <div className="flex flex-wrap gap-2">
@@ -250,15 +250,15 @@ export function SettingsView() {
           detail={health === "loading" ? "checking…" : health?.omdb ? "configured" : "missing"}
         />
         {missingKeys ? (
-          <div className="border-line bg-surface flex flex-col gap-2 rounded-2xl border p-3.5">
-            <p className="text-muted text-[13px]">
+          <div className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-3.5">
+            <p className="text-[13px] text-muted">
               Add free keys to <code className="font-mono">.env.local</code> (or the Vercel project
               env) and restart:
             </p>
-            <code className="bg-bg border-line block w-full overflow-x-auto rounded-xl border p-3 font-mono text-xs whitespace-pre-wrap text-[#cbd0dc]">
+            <code className="block w-full overflow-x-auto rounded-xl border border-line bg-bg p-3 font-mono text-xs whitespace-pre-wrap text-[#cbd0dc]">
               TMDB_API_KEY=…{"\n"}OMDB_API_KEY=…
             </code>
-            <p className="text-muted text-[13px]">
+            <p className="text-[13px] text-muted">
               TMDB key: themoviedb.org → Settings → API. OMDb key: omdbapi.com/apikey.aspx. Until
               then search, posters and critic scores are unavailable.
             </p>
@@ -276,11 +276,11 @@ export function SettingsView() {
             Sign out
           </Button>
         </div>
-        {syncError ? <p className="text-bad text-[13px]">{syncError}</p> : null}
+        {syncError ? <p className="text-[13px] text-bad">{syncError}</p> : null}
       </Section>
 
       <Section title="Appearance">
-        <div className="border-line bg-surface flex gap-1.5 rounded-xl border p-1">
+        <div className="flex gap-1.5 rounded-xl border border-line bg-surface p-1">
           {(
             [
               ["default", "Charcoal"],
@@ -291,8 +291,8 @@ export function SettingsView() {
               key={value}
               type="button"
               className={cn(
-                "text-muted flex-1 rounded-[9px] px-2.5 py-2 text-[13px] font-semibold transition-colors",
-                theme === value && "bg-surface-2 text-ink ring-accent/45 ring-1",
+                "flex-1 rounded-[9px] px-2.5 py-2 text-[13px] font-semibold text-muted transition-colors",
+                theme === value && "bg-surface-2 text-ink ring-1 ring-accent/45",
               )}
               onClick={() => chooseTheme(value)}
             >
@@ -314,17 +314,17 @@ export function SettingsView() {
             </option>
           ))}
         </Select>
-        <p className="text-muted text-[13px]">
+        <p className="text-[13px] text-muted">
           Used to show streaming providers for your country. Availability data by JustWatch.
         </p>
       </Section>
 
       <Section title="About">
-        <p className="text-muted text-[13px]">
+        <p className="text-[13px] text-muted">
           We Saw keeps a shared diary of everything you two watch, with a 1–10 rating each, and
           turns it into genre, actor, director and taste-match analytics.
         </p>
-        <p className="text-muted text-[13px]">
+        <p className="text-[13px] text-muted">
           Metadata and images from{" "}
           <a href="https://www.themoviedb.org" target="_blank" rel="noreferrer">
             TMDB

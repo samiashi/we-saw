@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useViewTransition } from "@/hooks/useViewTransition";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import { useStore } from "@/lib/store";
+import { useStore } from "@/hooks/useStore";
 import { cn } from "@/lib/utils";
 import { HistoryView } from "@/views/HistoryView";
 import { LogView } from "@/views/LogView";
@@ -75,12 +75,12 @@ export function App() {
     return (
       <div className="flex min-h-screen items-center justify-center p-6">
         <div className="flex max-w-[420px] flex-col items-center gap-3 text-center">
-          <p className="text-muted text-sm">
+          <p className="text-sm text-muted">
             {syncError ? "Could not load your log." : "Loading your log…"}
           </p>
           {syncError ? (
             <>
-              <p className="text-bad text-[13px]">{syncError}</p>
+              <p className="text-[13px] text-bad">{syncError}</p>
               <Button onClick={() => void retryLoad()} disabled={retrying}>
                 {retrying ? "Trying…" : "Try again"}
               </Button>
@@ -96,7 +96,7 @@ export function App() {
     <div className="min-h-screen">
       <main className="mx-auto max-w-[720px] px-4 pt-5 pb-[108px]">
         {partnerJoined ? (
-          <div className="border-good/40 bg-good/10 mb-4 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-[14px]">
+          <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-good/40 bg-good/10 px-4 py-3 text-[14px]">
             <span>
               {people.find((person) => person.id !== userId)?.name ?? "Your partner"} joined your
               household
@@ -131,7 +131,7 @@ export function App() {
       {syncError ? (
         <div
           role="status"
-          className="bg-surface-2 border-bad/40 fixed bottom-[calc(84px+env(safe-area-inset-bottom))] left-1/2 z-60 flex max-w-[min(92vw,480px)] -translate-x-1/2 items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-[13px]"
+          className="fixed bottom-[calc(84px+env(safe-area-inset-bottom))] left-1/2 z-60 flex max-w-[min(92vw,480px)] -translate-x-1/2 items-center gap-2.5 rounded-xl border border-bad/40 bg-surface-2 px-3.5 py-2.5 text-[13px]"
         >
           <span>{syncError}</span>
           <Button variant="ghost" size="sm" onClick={clearSyncError}>
@@ -140,14 +140,14 @@ export function App() {
         </div>
       ) : null}
 
-      <nav className="border-line fixed inset-x-0 bottom-0 z-40 flex justify-center gap-1 border-t bg-[rgba(14,15,19,0.86)] px-3 pt-2 pb-[calc(8px+env(safe-area-inset-bottom))] backdrop-blur-xl">
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex justify-center gap-1 border-t border-line bg-[rgba(14,15,19,0.86)] px-3 pt-2 pb-[calc(8px+env(safe-area-inset-bottom))] backdrop-blur-xl">
         {tabs.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             type="button"
             className={cn(
-              "text-muted flex max-w-[110px] flex-1 flex-col items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] transition-colors",
-              tab === id && "text-accent bg-accent/8",
+              "flex max-w-[110px] flex-1 flex-col items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] text-muted transition-colors",
+              tab === id && "bg-accent/8 text-accent",
             )}
             onClick={() => selectTab(id)}
           >

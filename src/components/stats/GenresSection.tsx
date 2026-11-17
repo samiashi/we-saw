@@ -46,7 +46,7 @@ export function GenresSection({ genres }: { genres: StatRow[] }) {
           </div>
         </>
       ) : (
-        <p className="text-muted text-[13px]">Not enough data yet.</p>
+        <p className="text-[13px] text-muted">Not enough data yet.</p>
       )}
     </section>
   );

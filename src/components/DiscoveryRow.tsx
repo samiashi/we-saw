@@ -40,14 +40,14 @@ export function DiscoveryRow({
               <span className="line-clamp-2 min-h-[33px] text-xs leading-snug">{item.name}</span>
               <span className="mt-auto flex flex-wrap gap-1">
                 {safe != null ? (
-                  <span className="border-accent/45 bg-accent/12 inline-flex rounded-full border px-2 py-0.5 text-[11px] text-[#f3d493]">
+                  <span className="inline-flex rounded-full border border-accent/45 bg-accent/12 px-2 py-0.5 text-[11px] text-[#f3d493]">
                     Safe {safe}
                   </span>
                 ) : null}
                 {item.voteAverage != null ? (
                   <span
                     className={cn(
-                      "border-line text-muted inline-flex rounded-full border px-2 py-0.5 text-[11px]",
+                      "inline-flex rounded-full border border-line px-2 py-0.5 text-[11px] text-muted",
                     )}
                   >
                     TMDB {item.voteAverage}

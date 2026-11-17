@@ -15,14 +15,14 @@ function ProviderGroup({ label, providers }: { label: string; providers: WatchPr
 
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="text-muted text-xs tracking-[0.07em] uppercase">{label}</span>
+      <span className="text-xs tracking-[0.07em] text-muted uppercase">{label}</span>
       <div className="flex flex-wrap gap-2">
         {providers.map((provider) => {
           const logo = providerLogoUrl(provider.logoPath);
           return (
             <span
               key={provider.name}
-              className="border-line bg-surface-2 flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[13px]"
+              className="flex items-center gap-1.5 rounded-lg border border-line bg-surface-2 px-2 py-1 text-[13px]"
             >
               {logo ? <img className="size-5 rounded" src={logo} alt="" loading="lazy" /> : null}
               {provider.name}
@@ -68,7 +68,7 @@ export function WhereToWatch({
   const entry = providers?.[region];
   if (!entry) {
     return (
-      <p className={cn("text-muted text-[13px]", className)}>
+      <p className={cn("text-[13px] text-muted", className)}>
         No streaming information for {regionName(region)} yet.
       </p>
     );
@@ -81,7 +81,7 @@ export function WhereToWatch({
 
   if (!groups.some(([, list]) => list.length)) {
     return (
-      <p className={cn("text-muted text-[13px]", className)}>
+      <p className={cn("text-[13px] text-muted", className)}>
         Not on any service in {regionName(region)} right now.
       </p>
     );
@@ -92,7 +92,7 @@ export function WhereToWatch({
       {groups.map(([label, list]) => (
         <ProviderGroup key={label} label={label} providers={list} />
       ))}
-      <p className="text-muted text-xs">
+      <p className="text-xs text-muted">
         Streaming data from{" "}
         <a href={entry.link ?? "https://www.justwatch.com"} target="_blank" rel="noreferrer">
           JustWatch

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { WhereToWatch } from "@/components/WhereToWatch";
 import { seasonLabel } from "@/lib/analytics";
-import { useStore } from "@/lib/store";
+import { useStore } from "@/hooks/useStore";
 import { useToast } from "@/hooks/useToast";
 import type { Entry } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -50,7 +50,7 @@ function WatchDetail({ entry, onClose }: { entry: Entry; onClose: () => void }) 
     <Drawer open onOpenChange={(open) => (!open ? onClose() : undefined)}>
       <DrawerContent aria-label={`${entry.title.name} watch details`}>
         <header className="flex items-center justify-between">
-          <span className="text-muted text-xs tracking-[0.08em] uppercase">
+          <span className="text-xs tracking-[0.08em] text-muted uppercase">
             {formatWatchDate(entry.watch.watchedOn)}
           </span>
           <Button variant="ghost" size="sm" onClick={onClose}>
@@ -62,7 +62,7 @@ function WatchDetail({ entry, onClose }: { entry: Entry; onClose: () => void }) 
           {hasBackdrop ? (
             <div className="relative h-40 overflow-hidden rounded-t-[20px]">
               <Backdrop title={entry.title} className="h-full w-full" />
-              <div className="from-surface absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-surface to-transparent" />
             </div>
           ) : null}
           <div
@@ -73,15 +73,15 @@ function WatchDetail({ entry, onClose }: { entry: Entry; onClose: () => void }) 
           >
             <Poster
               title={entry.title}
-              className={cn(hasBackdrop && "ring-surface shadow-lg ring-4")}
+              className={cn(hasBackdrop && "shadow-lg ring-4 ring-surface")}
             />
             <div className="flex min-w-0 flex-col gap-1.5 pt-1">
               <h2 className="text-[19px] leading-tight font-semibold">
                 {entry.title.name}
-                {label ? <span className="text-muted font-medium"> · {label}</span> : null}
+                {label ? <span className="font-medium text-muted"> · {label}</span> : null}
               </h2>
               <div className="flex flex-wrap items-center gap-2 text-xs">
-                <span className="border-line text-muted inline-flex rounded-full border px-2.5 py-0.5 text-[10.5px] tracking-[0.06em] uppercase">
+                <span className="inline-flex rounded-full border border-line px-2.5 py-0.5 text-[10.5px] tracking-[0.06em] text-muted uppercase">
                   {entry.title.type === "movie" ? "Movie" : "TV"}
                 </span>
                 {entry.title.year ? <span className="text-muted">{entry.title.year}</span> : null}
@@ -92,24 +92,24 @@ function WatchDetail({ entry, onClose }: { entry: Entry; onClose: () => void }) 
                 ))}
               </div>
               {entry.title.directors.length ? (
-                <p className="text-muted text-xs">Directed by {entry.title.directors.join(", ")}</p>
+                <p className="text-xs text-muted">Directed by {entry.title.directors.join(", ")}</p>
               ) : null}
               {entry.title.cast.length ? (
-                <p className="text-muted text-xs">With {entry.title.cast.slice(0, 4).join(", ")}</p>
+                <p className="text-xs text-muted">With {entry.title.cast.slice(0, 4).join(", ")}</p>
               ) : null}
               <div className="flex flex-wrap gap-1.5">
                 {critic?.imdb != null ? (
-                  <span className="border-accent/35 bg-accent/8 inline-flex rounded-full border px-2.5 py-0.5 text-[11.5px] text-[#d8c08d]">
+                  <span className="inline-flex rounded-full border border-accent/35 bg-accent/8 px-2.5 py-0.5 text-[11.5px] text-[#d8c08d]">
                     IMDb {critic.imdb}
                   </span>
                 ) : null}
                 {critic?.rt != null ? (
-                  <span className="border-accent/35 bg-accent/8 inline-flex rounded-full border px-2.5 py-0.5 text-[11.5px] text-[#d8c08d]">
+                  <span className="inline-flex rounded-full border border-accent/35 bg-accent/8 px-2.5 py-0.5 text-[11.5px] text-[#d8c08d]">
                     RT {critic.rt}%
                   </span>
                 ) : null}
                 {critic?.metacritic != null ? (
-                  <span className="border-accent/35 bg-accent/8 inline-flex rounded-full border px-2.5 py-0.5 text-[11.5px] text-[#d8c08d]">
+                  <span className="inline-flex rounded-full border border-accent/35 bg-accent/8 px-2.5 py-0.5 text-[11.5px] text-[#d8c08d]">
                     MC {critic.metacritic}
                   </span>
                 ) : null}
@@ -119,19 +119,19 @@ function WatchDetail({ entry, onClose }: { entry: Entry; onClose: () => void }) 
         </div>
 
         {entry.title.overview ? (
-          <p className="text-ink/85 text-sm leading-relaxed">{entry.title.overview}</p>
+          <p className="text-sm leading-relaxed text-ink/85">{entry.title.overview}</p>
         ) : null}
 
         {entry.title.tmdbId ? (
           <section className="flex flex-col gap-2.5">
-            <span className="text-muted text-xs tracking-[0.07em] uppercase">Where to watch</span>
+            <span className="text-xs tracking-[0.07em] text-muted uppercase">Where to watch</span>
             <WhereToWatch type={entry.title.type} tmdbId={entry.title.tmdbId} />
           </section>
         ) : null}
 
         {watcherPeople.map((person) => (
           <div key={person.id} className="flex flex-col gap-2">
-            <span className="text-muted text-[13px]">
+            <span className="text-[13px] text-muted">
               {nameFor(person.id)}
               {entry.scores[person.id] == null && canEditScore(person.id, watchers)
                 ? " — not rated yet"
@@ -147,7 +147,7 @@ function WatchDetail({ entry, onClose }: { entry: Entry; onClose: () => void }) 
         ))}
 
         {entry.watch.note ? (
-          <p className="text-muted text-sm italic">“{entry.watch.note}”</p>
+          <p className="text-sm text-muted italic">“{entry.watch.note}”</p>
         ) : null}
 
         <div className="flex justify-end">
@@ -194,7 +194,7 @@ export function HistoryView() {
     <div className="flex flex-col gap-[18px]">
       <header>
         <h1 className="text-[26px] font-bold tracking-tight">History</h1>
-        <p className="text-muted mt-1 text-sm">{entries.length} watches logged</p>
+        <p className="mt-1 text-sm text-muted">{entries.length} watches logged</p>
       </header>
 
       <div className="flex flex-wrap gap-2">
@@ -203,8 +203,8 @@ export function HistoryView() {
             key={option}
             type="button"
             className={cn(
-              "border-line text-muted rounded-full border px-3.5 py-1.5 text-[13px] transition-colors",
-              filter === option && "bg-surface-2 border-accent text-ink",
+              "rounded-full border border-line px-3.5 py-1.5 text-[13px] text-muted transition-colors",
+              filter === option && "border-accent bg-surface-2 text-ink",
             )}
             onClick={() => setFilter(option)}
           >
@@ -218,7 +218,7 @@ export function HistoryView() {
           <section key={key} className="cv-auto flex flex-col gap-2.5">
             <div className="flex items-baseline justify-between gap-2">
               <h2 className="text-[17px] font-semibold">{groupLabel(key)}</h2>
-              <span className="text-muted text-[13px]">{monthEntries.length} watched</span>
+              <span className="text-[13px] text-muted">{monthEntries.length} watched</span>
             </div>
             <div className="grid auto-rows-fr grid-cols-1 gap-2">
               {monthEntries.map((entry) => (
@@ -232,7 +232,7 @@ export function HistoryView() {
           </section>
         ))
       ) : (
-        <p className="text-muted text-[13px]">Nothing here yet.</p>
+        <p className="text-[13px] text-muted">Nothing here yet.</p>
       )}
 
       {selected ? <WatchDetail entry={selected} onClose={() => setSelectedId(null)} /> : null}

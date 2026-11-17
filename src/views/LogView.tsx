@@ -9,7 +9,7 @@ import {
   titleToSummary,
 } from "@/lib/api";
 import { buildTasteProfile, safeSummaryScore } from "@/lib/analytics";
-import { useStore } from "@/lib/store";
+import { useStore } from "@/hooks/useStore";
 import { useToast } from "@/hooks/useToast";
 import type { Title, TitleSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -136,11 +136,11 @@ export function LogView() {
     <div className="flex flex-col gap-[18px]">
       <header>
         <h1 className="text-[26px] font-bold tracking-tight">Log a watch</h1>
-        <p className="text-muted mt-1 text-sm">Find a movie or show, then rate it together.</p>
+        <p className="mt-1 text-sm text-muted">Find a movie or show, then rate it together.</p>
       </header>
 
       <div className="relative">
-        <Search size={18} className="text-muted absolute top-1/2 left-3.5 -translate-y-1/2" />
+        <Search size={18} className="absolute top-1/2 left-3.5 -translate-y-1/2 text-muted" />
         <Input
           className="pl-11"
           type="search"
@@ -150,14 +150,14 @@ export function LogView() {
         />
       </div>
 
-      {showResults && searching ? <p className="text-muted text-[13px]">Searching…</p> : null}
+      {showResults && searching ? <p className="text-[13px] text-muted">Searching…</p> : null}
 
       {showResults && results.length ? (
         <div className="grid auto-rows-fr grid-cols-1 gap-2">
           {results.map((result) => (
             <div
               key={result.key}
-              className="border-line bg-surface flex items-center gap-1.5 rounded-2xl border p-3"
+              className="flex items-center gap-1.5 rounded-2xl border border-line bg-surface p-3"
             >
               <button
                 type="button"
@@ -168,7 +168,7 @@ export function LogView() {
                 <span className="flex min-w-0 flex-col gap-1">
                   <span className="truncate text-[15px] font-semibold">{result.name}</span>
                   <span className="flex items-center gap-2 text-xs">
-                    <span className="border-line text-muted inline-flex rounded-full border px-2.5 py-0.5 text-[10.5px] tracking-[0.06em] uppercase">
+                    <span className="inline-flex rounded-full border border-line px-2.5 py-0.5 text-[10.5px] tracking-[0.06em] text-muted uppercase">
                       {result.type === "movie" ? "Movie" : "TV"}
                     </span>
                     {result.year ? <span className="text-muted">{result.year}</span> : null}
@@ -190,7 +190,7 @@ export function LogView() {
       ) : null}
 
       {showResults && !searching && !results.length ? (
-        <p className="text-muted text-[13px]">
+        <p className="text-[13px] text-muted">
           {searchFailed
             ? "Search is unavailable right now. Try again."
             : "No matches. Try another spelling."}
@@ -216,7 +216,7 @@ export function LogView() {
                         key={option}
                         type="button"
                         className={cn(
-                          "border-line text-muted rounded-full border px-2.5 py-1 text-xs transition-colors",
+                          "rounded-full border border-line px-2.5 py-1 text-xs text-muted transition-colors",
                           sort === option && "border-accent bg-accent/8 text-ink",
                         )}
                         onClick={() => setSort(option)}
@@ -249,7 +249,7 @@ export function LogView() {
             ))}
           </div>
         ) : (
-          <p className="text-muted text-[13px]">
+          <p className="text-[13px] text-muted">
             Nothing logged yet. Search above to add your first watch.
           </p>
         )}

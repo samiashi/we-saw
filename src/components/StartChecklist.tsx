@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Check, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { hasRegionChoice } from "@/lib/region";
-import { useStore } from "@/lib/store";
+import { useStore } from "@/hooks/useStore";
 import { cn } from "@/lib/utils";
 
 const DISMISS_KEY = "wesaw.checklist-dismissed";
@@ -43,11 +43,11 @@ export function StartChecklist({ onNavigate }: { onNavigate: (tab: "log" | "sett
   }
 
   return (
-    <section className="border-line bg-surface mb-4 flex flex-col gap-1 rounded-2xl border p-3.5">
+    <section className="mb-4 flex flex-col gap-1 rounded-2xl border border-line bg-surface p-3.5">
       <div className="flex items-center justify-between gap-2">
         <span className="text-[15px] font-semibold">Get started</span>
         <span className="flex items-center gap-1">
-          <span className="text-muted text-xs">
+          <span className="text-xs text-muted">
             {items.length - pending.length} of {items.length}
           </span>
           <Button variant="ghost" size="icon" aria-label="Dismiss checklist" onClick={dismiss}>
@@ -59,12 +59,12 @@ export function StartChecklist({ onNavigate }: { onNavigate: (tab: "log" | "sett
         <button
           key={item.id}
           type="button"
-          className="hover:bg-surface-2 flex items-center gap-2.5 rounded-xl px-2 py-2 text-left text-[14px] transition-colors"
+          className="flex items-center gap-2.5 rounded-xl px-2 py-2 text-left text-[14px] transition-colors hover:bg-surface-2"
           onClick={() => onNavigate(item.tab)}
         >
           <span
             className={cn(
-              "border-line flex size-5 shrink-0 items-center justify-center rounded-full border",
+              "flex size-5 shrink-0 items-center justify-center rounded-full border border-line",
               item.done && "border-good bg-good/20",
             )}
           >

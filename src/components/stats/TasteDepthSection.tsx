@@ -44,19 +44,19 @@ export function TasteDepthSection({
         ) : null}
       </div>
       <div className="grid gap-2.5 sm:grid-cols-2">
-        <div className="border-line bg-surface flex flex-col gap-2 rounded-2xl border p-3.5">
-          <span className="text-muted text-xs tracking-[0.07em] uppercase">Where it's from</span>
+        <div className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-3.5">
+          <span className="text-xs tracking-[0.07em] text-muted uppercase">Where it's from</span>
           {languages.foreignShare != null ? (
             <>
               <span className="text-[22px] font-bold tracking-tight">
                 {Math.round(languages.foreignShare)}%{" "}
-                <span className="text-muted text-xs font-normal">non-English</span>
+                <span className="text-xs font-normal text-muted">non-English</span>
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {languages.rows.slice(0, 5).map((row) => (
                   <span
                     key={row.language}
-                    className="border-line text-muted inline-flex rounded-full border px-2.5 py-0.5 text-[11.5px] uppercase"
+                    className="inline-flex rounded-full border border-line px-2.5 py-0.5 text-[11.5px] text-muted uppercase"
                   >
                     {row.language} · {row.count}
                   </span>
@@ -64,18 +64,18 @@ export function TasteDepthSection({
               </div>
             </>
           ) : (
-            <p className="text-muted text-[13px]">
+            <p className="text-[13px] text-muted">
               No language data yet{languages.unknown ? ` (${languages.unknown} titles)` : ""}.
             </p>
           )}
         </div>
-        <div className="border-line bg-surface flex flex-col gap-2 rounded-2xl border p-3.5">
-          <span className="text-muted text-xs tracking-[0.07em] uppercase">Comfort rewatches</span>
+        <div className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-3.5">
+          <span className="text-xs tracking-[0.07em] text-muted uppercase">Comfort rewatches</span>
           {rewatches.comfort.length ? (
             <>
               <span className="text-[22px] font-bold tracking-tight">
                 {rewatches.rate}%{" "}
-                <span className="text-muted text-xs font-normal">of titles rewatched</span>
+                <span className="text-xs font-normal text-muted">of titles rewatched</span>
               </span>
               {rewatches.comfort.map((row) => (
                 <span key={row.name} className="text-[13px]">
@@ -88,7 +88,7 @@ export function TasteDepthSection({
               ))}
             </>
           ) : (
-            <p className="text-muted text-[13px]">Nothing rewatched yet.</p>
+            <p className="text-[13px] text-muted">Nothing rewatched yet.</p>
           )}
         </div>
       </div>
@@ -131,10 +131,11 @@ export function TasteDepthSection({
                 cursor={{ strokeDasharray: "3 3" }}
                 content={({ payload }) => {
                   const point = payload?.[0]?.payload as
-                    { name?: string; runtime?: number; score?: number } | undefined;
+                    | { name?: string; runtime?: number; score?: number }
+                    | undefined;
                   if (!point) return null;
                   return (
-                    <div className="bg-surface-2 border-line rounded-xl border px-3 py-2 text-xs">
+                    <div className="rounded-xl border border-line bg-surface-2 px-3 py-2 text-xs">
                       {point.name} · {point.runtime}m · {point.score}
                     </div>
                   );
@@ -145,7 +146,7 @@ export function TasteDepthSection({
           </ResponsiveContainer>
         </div>
       ) : null}
-      <p className="text-muted text-[12.5px]">
+      <p className="text-[12.5px] text-muted">
         Era = average rating by release decade. Scatter = movie runtime against rating.
       </p>
     </section>

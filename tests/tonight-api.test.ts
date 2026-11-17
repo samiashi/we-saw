@@ -47,7 +47,7 @@ function setup(
     "fetch",
     vi.fn(async (input: string | URL, init?: RequestInit) => {
       const url = String(input);
-      calls.push({ url, body: String(init?.body ?? "") });
+      calls.push({ url, body: typeof init?.body === "string" ? init.body : "" });
       if (url.includes("/auth/v1/user"))
         return Response.json(options.invalidAuth ? {} : { id: "person-a" }, {
           status: options.invalidAuth ? 401 : 200,

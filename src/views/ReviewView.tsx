@@ -23,7 +23,7 @@ import {
   totalMinutes,
   yearEntries,
 } from "@/lib/analytics";
-import { useStore } from "@/lib/store";
+import { useStore } from "@/hooks/useStore";
 import { useToast } from "@/hooks/useToast";
 import { copyText } from "@/lib/clipboard";
 import { posterUrl } from "@/lib/api";
@@ -44,7 +44,7 @@ export function ReviewView({ year, onClose }: { year: string; onClose: () => voi
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    confetti({
+    void confetti({
       particleCount: 90,
       spread: 75,
       origin: { y: 0.2 },
@@ -173,12 +173,12 @@ export function ReviewView({ year, onClose }: { year: string; onClose: () => voi
             <Copy size={16} /> Copy recap
           </Button>
         </div>
-        <h1 className="text-accent text-[44px] leading-none font-bold tracking-tight">{year}</h1>
-        <p className="text-muted text-sm">The year in review.</p>
+        <h1 className="text-[44px] leading-none font-bold tracking-tight text-accent">{year}</h1>
+        <p className="text-sm text-muted">The year in review.</p>
       </header>
 
       {!yearList.length ? (
-        <p className="text-muted text-[13px]">Nothing logged in {year} yet.</p>
+        <p className="text-[13px] text-muted">Nothing logged in {year} yet.</p>
       ) : (
         <>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-2.5">
@@ -189,7 +189,7 @@ export function ReviewView({ year, onClose }: { year: string; onClose: () => voi
           </div>
 
           {hotMonth && hotMonth.count > 0 ? (
-            <p className="text-muted text-[13px]">
+            <p className="text-[13px] text-muted">
               {hotMonth.label} was your biggest month with {hotMonth.count}{" "}
               {hotMonth.count === 1 ? "watch" : "watches"}.
             </p>
@@ -250,7 +250,7 @@ export function ReviewView({ year, onClose }: { year: string; onClose: () => voi
           {actors.length || directors.length ? (
             <section className="flex flex-col gap-2.5">
               <h2 className="text-[17px] font-semibold">Faces of the year</h2>
-              <div className="border-line bg-surface flex flex-col gap-2 rounded-2xl border p-3.5">
+              <div className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-3.5">
                 {directors.length ? (
                   <div className="flex justify-between gap-3 text-[13.5px]">
                     <span className="truncate">Directors</span>
@@ -273,7 +273,7 @@ export function ReviewView({ year, onClose }: { year: string; onClose: () => voi
             <section className="flex flex-col gap-2.5">
               <div className="flex items-baseline justify-between gap-2">
                 <h2 className="text-[17px] font-semibold">Taste match</h2>
-                <span className="text-muted text-[13px]">On joint watches</span>
+                <span className="text-[13px] text-muted">On joint watches</span>
               </div>
               <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-2.5">
                 <StatCard
@@ -289,8 +289,8 @@ export function ReviewView({ year, onClose }: { year: string; onClose: () => voi
                 <StatCard value={compat.sharedCount} label="Joint ratings" />
               </div>
               {gaps.length ? (
-                <div className="border-line bg-surface flex flex-col gap-2 rounded-2xl border p-3.5">
-                  <span className="text-muted text-xs tracking-[0.07em] uppercase">The split</span>
+                <div className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-3.5">
+                  <span className="text-xs tracking-[0.07em] text-muted uppercase">The split</span>
                   <div className="flex justify-between gap-3 text-[13.5px]">
                     <span className="truncate">{gaps[0].entry.title.name}</span>
                     <span className="text-muted">
@@ -311,17 +311,17 @@ export function ReviewView({ year, onClose }: { year: string; onClose: () => voi
           <section className="flex flex-col gap-2.5">
             <h2 className="text-[17px] font-semibold">Solo vs together</h2>
             <div className="flex flex-wrap gap-2">
-              <div className="border-line bg-surface flex flex-col gap-0.5 rounded-xl border px-3.5 py-2.5">
+              <div className="flex flex-col gap-0.5 rounded-xl border border-line bg-surface px-3.5 py-2.5">
                 <strong className="text-sm">Together</strong>
-                <span className="text-muted text-[13px]">{joint.length} joint watches</span>
+                <span className="text-[13px] text-muted">{joint.length} joint watches</span>
               </div>
               {soloCounts.map((row) => (
                 <div
                   key={row.person.id}
-                  className="border-line bg-surface flex flex-col gap-0.5 rounded-xl border px-3.5 py-2.5"
+                  className="flex flex-col gap-0.5 rounded-xl border border-line bg-surface px-3.5 py-2.5"
                 >
                   <strong className="text-sm">{nameFor(row.person.id)}</strong>
-                  <span className="text-muted text-[13px]">{row.count} solo</span>
+                  <span className="text-[13px] text-muted">{row.count} solo</span>
                 </div>
               ))}
             </div>
@@ -330,11 +330,11 @@ export function ReviewView({ year, onClose }: { year: string; onClose: () => voi
           {critics.length ? (
             <section className="flex flex-col gap-2.5">
               <h2 className="text-[17px] font-semibold">You vs critics</h2>
-              <div className="border-line bg-surface flex flex-col gap-2 rounded-2xl border p-3.5">
+              <div className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-3.5">
                 {critics.map((row) => (
                   <div key={row.source} className="flex justify-between gap-3 text-[13.5px]">
                     <span className="truncate">{row.source}</span>
-                    <span className="text-muted whitespace-nowrap">
+                    <span className="whitespace-nowrap text-muted">
                       You {row.userAvg} · Critics {row.criticAvg} ·{" "}
                       <span className={row.delta >= 0 ? "text-good" : "text-bad"}>
                         {row.delta >= 0 ? "+" : ""}

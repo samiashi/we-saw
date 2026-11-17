@@ -1,5 +1,5 @@
 import type { PredictionAccuracy } from "@/lib/analytics";
-import { useStore } from "@/lib/store";
+import { useStore } from "@/hooks/useStore";
 
 export function PredictionsSection({ accuracies }: { accuracies: PredictionAccuracy[] }) {
   const { nameFor } = useStore();
@@ -8,14 +8,14 @@ export function PredictionsSection({ accuracies }: { accuracies: PredictionAccur
     <section className="flex flex-col gap-2.5">
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="text-[17px] font-semibold">Prediction accuracy</h2>
-        <span className="text-muted text-[13px]">Leave-one-out</span>
+        <span className="text-[13px] text-muted">Leave-one-out</span>
       </div>
       {accuracies.some((row) => row.meanAbsoluteError != null) ? (
-        <div className="border-line bg-surface flex flex-col gap-2 rounded-2xl border p-3.5">
+        <div className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-3.5">
           {accuracies.map((row) => (
             <div key={row.personId} className="flex justify-between gap-3 text-[13.5px]">
               <span className="truncate">{nameFor(row.personId)}</span>
-              <span className="text-muted whitespace-nowrap">
+              <span className="whitespace-nowrap text-muted">
                 {row.meanAbsoluteError != null
                   ? `predicts self within ±${row.meanAbsoluteError} over ${row.count} ratings`
                   : `needs 5 ratings (${row.count})`}
@@ -24,7 +24,7 @@ export function PredictionsSection({ accuracies }: { accuracies: PredictionAccur
           ))}
         </div>
       ) : (
-        <p className="text-muted text-[13px]">
+        <p className="text-[13px] text-muted">
           Rate at least five things to see how predictable you are.
         </p>
       )}

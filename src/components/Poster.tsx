@@ -46,7 +46,7 @@ export function Poster({
     <div
       className={cn(
         base,
-        "text-muted flex items-center justify-center bg-gradient-to-br from-[#232838] to-[#15171e] text-sm font-semibold",
+        "flex items-center justify-center bg-gradient-to-br from-[#232838] to-[#15171e] text-sm font-semibold text-muted",
       )}
       aria-hidden="true"
     >

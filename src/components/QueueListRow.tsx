@@ -3,7 +3,7 @@ import { Poster } from "@/components/Poster";
 import { Chip } from "@/components/ui/chip";
 import { PredictionChips } from "@/components/PredictionChips";
 import { NextEpisodeChip } from "@/components/NextEpisodeChip";
-import { useStore } from "@/lib/store";
+import { useStore } from "@/hooks/useStore";
 import { useToast } from "@/hooks/useToast";
 import { titleToSummary } from "@/lib/api";
 import type { Prediction } from "@/lib/analytics";
@@ -32,15 +32,15 @@ export function QueueListRow({
   }
 
   return (
-    <div className="border-line bg-surface flex h-full items-start gap-3 rounded-2xl border p-3">
+    <div className="flex h-full items-start gap-3 rounded-2xl border border-line bg-surface p-3">
       <Poster title={title} variant="small" />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 self-stretch">
         <span className="truncate text-[15px] font-semibold">
           {title.name}
-          {title.year ? <span className="text-muted font-medium"> · {title.year}</span> : null}
+          {title.year ? <span className="font-medium text-muted"> · {title.year}</span> : null}
         </span>
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="border-line text-muted inline-flex rounded-full border px-2.5 py-0.5 text-[10.5px] tracking-[0.06em] uppercase">
+          <span className="inline-flex rounded-full border border-line px-2.5 py-0.5 text-[10.5px] tracking-[0.06em] text-muted uppercase">
             {title.type === "movie" ? "Movie" : "TV"}
           </span>
           {item.addedBy ? (

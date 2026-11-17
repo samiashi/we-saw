@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { fallbackTitle, fetchTitleDetails } from "@/lib/api";
 import { buildTasteProfile, predictScore } from "@/lib/analytics";
-import { useStore } from "@/lib/store";
+import { useStore } from "@/hooks/useStore";
 import { useToast } from "@/hooks/useToast";
 import type { Title, TitleSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -35,7 +35,7 @@ export function DiscoverySheet({
   useEffect(() => {
     let active = true;
 
-    (async () => {
+    void (async () => {
       const details = (await fetchTitleDetails(summary)) ?? fallbackTitle(summary);
       if (!active) return;
       setTitle(details);
@@ -75,7 +75,7 @@ export function DiscoverySheet({
     <Drawer open onOpenChange={(open) => (!open ? onClose() : undefined)}>
       <DrawerContent aria-label={title?.name ?? summary.name}>
         <header className="flex items-center justify-between">
-          <span className="text-muted text-xs tracking-[0.08em] uppercase">Discover</span>
+          <span className="text-xs tracking-[0.08em] text-muted uppercase">Discover</span>
           <Button variant="ghost" size="sm" onClick={onClose}>
             Close
           </Button>
@@ -93,7 +93,7 @@ export function DiscoverySheet({
               {hasBackdrop ? (
                 <div className="relative h-40 overflow-hidden rounded-t-[20px]">
                   <Backdrop title={title} className="h-full w-full" />
-                  <div className="from-surface absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-surface to-transparent" />
                 </div>
               ) : null}
               <div
@@ -104,7 +104,7 @@ export function DiscoverySheet({
               >
                 <Poster
                   title={title}
-                  className={cn(hasBackdrop && "ring-surface shadow-lg ring-4")}
+                  className={cn(hasBackdrop && "shadow-lg ring-4 ring-surface")}
                 />
                 <div className="flex min-w-0 flex-col gap-1.5 pt-1">
                   <h2 className="text-[19px] leading-tight font-semibold">
@@ -112,7 +112,7 @@ export function DiscoverySheet({
                     {title.year ? <span className="text-muted">({title.year})</span> : null}
                   </h2>
                   <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <span className="border-line text-muted inline-flex rounded-full border px-2.5 py-0.5 text-[10.5px] tracking-[0.06em] uppercase">
+                    <span className="inline-flex rounded-full border border-line px-2.5 py-0.5 text-[10.5px] tracking-[0.06em] text-muted uppercase">
                       {title.type === "movie" ? "Movie" : "TV"}
                     </span>
                     {title.genres.slice(0, 3).map((genre) => (
@@ -132,7 +132,7 @@ export function DiscoverySheet({
                         </span>
                       ))}
                       {safe != null ? (
-                        <span className="border-accent/45 bg-accent/12 inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11.5px] text-[#f3d493]">
+                        <span className="inline-flex items-center rounded-full border border-accent/45 bg-accent/12 px-2.5 py-0.5 text-[11.5px] text-[#f3d493]">
                           Safe {safe}
                         </span>
                       ) : null}
@@ -143,7 +143,7 @@ export function DiscoverySheet({
             </div>
 
             {title.overview ? (
-              <p className="text-ink/85 text-sm leading-relaxed">{title.overview}</p>
+              <p className="text-sm leading-relaxed text-ink/85">{title.overview}</p>
             ) : null}
 
             <div className="flex flex-wrap gap-2">
@@ -154,12 +154,12 @@ export function DiscoverySheet({
             </div>
 
             <section className="flex flex-col gap-2.5">
-              <span className="text-muted text-xs tracking-[0.07em] uppercase">Where to watch</span>
+              <span className="text-xs tracking-[0.07em] text-muted uppercase">Where to watch</span>
               <WhereToWatch type={title.type} tmdbId={title.tmdbId} />
             </section>
           </>
         ) : (
-          <p className="text-muted py-8 text-center text-sm">Could not load this title.</p>
+          <p className="py-8 text-center text-sm text-muted">Could not load this title.</p>
         )}
       </DrawerContent>
     </Drawer>

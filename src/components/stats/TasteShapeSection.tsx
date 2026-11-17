@@ -7,7 +7,7 @@ import {
   Tooltip,
 } from "recharts";
 import { SERIES_COLORS, TOOLTIP_STYLE } from "@/components/stats/chart";
-import { useStore } from "@/lib/store";
+import { useStore } from "@/hooks/useStore";
 
 export function TasteShapeSection({
   data,
@@ -22,7 +22,7 @@ export function TasteShapeSection({
     <section className="flex flex-col gap-2.5">
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="text-[17px] font-semibold">Taste shape</h2>
-        <span className="text-muted text-[13px]">Smoothed affinity, 1–10</span>
+        <span className="text-[13px] text-muted">Smoothed affinity, 1–10</span>
       </div>
       <div className="h-[280px] w-full">
         <ResponsiveContainer width="100%" height="100%">

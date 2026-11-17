@@ -1,5 +1,5 @@
 import { soloEntries } from "@/lib/analytics";
-import { useStore } from "@/lib/store";
+import { useStore } from "@/hooks/useStore";
 import { FilterChip } from "@/components/stats/FilterChip";
 
 export function StatsFilters({
@@ -34,7 +34,7 @@ export function StatsFilters({
         </FilterChip>
       ))}
 
-      <span className="bg-line mx-1 h-5 w-px" aria-hidden="true" />
+      <span className="mx-1 h-5 w-px bg-line" aria-hidden="true" />
 
       {(["all", "movie", "tv"] as const).map((option) => (
         <FilterChip
@@ -47,7 +47,7 @@ export function StatsFilters({
         </FilterChip>
       ))}
 
-      <span className="bg-line mx-1 h-5 w-px" aria-hidden="true" />
+      <span className="mx-1 h-5 w-px bg-line" aria-hidden="true" />
 
       <FilterChip small active={scopeId === "together"} onClick={() => onScope("together")}>
         Together · {jointCount}

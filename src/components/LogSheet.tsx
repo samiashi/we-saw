@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { fallbackTitle, fetchCriticScores, fetchTitleDetails } from "@/lib/api";
 import { formatMinutes } from "@/lib/analytics";
 import { localDateString } from "@/lib/dates";
-import { useStore } from "@/lib/store";
+import { useStore } from "@/hooks/useStore";
 import type { Title, TitleSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Backdrop } from "@/components/Backdrop";
@@ -41,7 +41,7 @@ export function LogSheet({
   useEffect(() => {
     let active = true;
 
-    (async () => {
+    void (async () => {
       let details = (await fetchTitleDetails(summary)) ?? fallbackTitle(summary);
       if (details.imdbId && !details.critic) {
         const critic = await fetchCriticScores(details.imdbId);
@@ -159,7 +159,7 @@ export function LogSheet({
     <Drawer open onOpenChange={(open) => (!open ? requestClose() : undefined)}>
       <DrawerContent aria-label={`Log ${title?.name ?? "a watch"}`}>
         <header className="flex items-center justify-between">
-          <span className="text-muted text-xs tracking-[0.08em] uppercase">Log a watch</span>
+          <span className="text-xs tracking-[0.08em] text-muted uppercase">Log a watch</span>
           <Button variant="ghost" size="sm" onClick={requestClose}>
             Close
           </Button>
@@ -184,7 +184,7 @@ export function LogSheet({
               {hasBackdrop ? (
                 <div className="relative h-40 overflow-hidden rounded-t-[20px]">
                   <Backdrop title={title} className="h-full w-full" />
-                  <div className="from-surface absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-surface to-transparent" />
                 </div>
               ) : null}
               <div
@@ -195,7 +195,7 @@ export function LogSheet({
               >
                 <Poster
                   title={title}
-                  className={cn(hasBackdrop && "ring-surface shadow-lg ring-4")}
+                  className={cn(hasBackdrop && "shadow-lg ring-4 ring-surface")}
                 />
                 <div className="flex min-w-0 flex-col gap-1.5 pt-1">
                   <h2 className="text-[19px] leading-tight font-semibold">
@@ -210,21 +210,21 @@ export function LogSheet({
                     ))}
                   </div>
                   {title.directors.length ? (
-                    <p className="text-muted text-xs">Directed by {title.directors.join(", ")}</p>
+                    <p className="text-xs text-muted">Directed by {title.directors.join(", ")}</p>
                   ) : null}
                   <div className="flex flex-wrap gap-1.5">
                     {title.critic?.imdb != null ? (
-                      <span className="border-accent/35 bg-accent/8 inline-flex rounded-full border px-2.5 py-0.5 text-[11.5px] text-[#d8c08d]">
+                      <span className="inline-flex rounded-full border border-accent/35 bg-accent/8 px-2.5 py-0.5 text-[11.5px] text-[#d8c08d]">
                         IMDb {title.critic.imdb}
                       </span>
                     ) : null}
                     {title.critic?.rt != null ? (
-                      <span className="border-accent/35 bg-accent/8 inline-flex rounded-full border px-2.5 py-0.5 text-[11.5px] text-[#d8c08d]">
+                      <span className="inline-flex rounded-full border border-accent/35 bg-accent/8 px-2.5 py-0.5 text-[11.5px] text-[#d8c08d]">
                         RT {title.critic.rt}%
                       </span>
                     ) : null}
                     {title.critic?.metacritic != null ? (
-                      <span className="border-accent/35 bg-accent/8 inline-flex rounded-full border px-2.5 py-0.5 text-[11.5px] text-[#d8c08d]">
+                      <span className="inline-flex rounded-full border border-accent/35 bg-accent/8 px-2.5 py-0.5 text-[11.5px] text-[#d8c08d]">
                         MC {title.critic.metacritic}
                       </span>
                     ) : null}
@@ -235,7 +235,7 @@ export function LogSheet({
 
             {title.type === "tv" ? (
               <div className="flex flex-col gap-2">
-                <span className="text-muted text-[13px]">Seasons watched</span>
+                <span className="text-[13px] text-muted">Seasons watched</span>
                 {title.seasons.length ? (
                   <>
                     <div className="flex flex-wrap gap-1.5">
@@ -263,7 +263,7 @@ export function LogSheet({
                         );
                       })}
                     </div>
-                    <p className="text-muted text-[13px]">
+                    <p className="text-[13px] text-muted">
                       {selectedSeasons == null
                         ? `Whole show · one rating${
                             seasonEstimate ? ` · about ${formatMinutes(seasonEstimate)}` : ""
@@ -278,12 +278,12 @@ export function LogSheet({
                     </p>
                   </>
                 ) : (
-                  <p className="text-muted text-[13px]">
+                  <p className="text-[13px] text-muted">
                     No season list for this show — logging the whole show.
                   </p>
                 )}
                 {recentTvWatches < 3 && title.seasons.length ? (
-                  <p className="text-muted text-[12.5px]">
+                  <p className="text-[12.5px] text-muted">
                     Tap the seasons you've seen — one rating covers the whole run.
                   </p>
                 ) : null}
@@ -292,13 +292,13 @@ export function LogSheet({
 
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between gap-2">
-                <label className="text-muted text-[13px]" htmlFor="watch-date">
+                <label className="text-[13px] text-muted" htmlFor="watch-date">
                   Watched on
                 </label>
                 <button
                   type="button"
                   className={cn(
-                    "border-line text-muted rounded-full border px-2.5 py-1 text-xs transition-colors",
+                    "rounded-full border border-line px-2.5 py-1 text-xs text-muted transition-colors",
                     dateUnknown && "border-accent bg-accent/8 text-ink",
                   )}
                   aria-pressed={dateUnknown}
@@ -308,7 +308,7 @@ export function LogSheet({
                 </button>
               </div>
               {dateUnknown ? (
-                <p className="text-muted text-[13px]">
+                <p className="text-[13px] text-muted">
                   No date — it won't appear in date-based charts.
                 </p>
               ) : (
@@ -320,22 +320,22 @@ export function LogSheet({
                     onChange={(event) => setDate(event.target.value)}
                   />
                   {date && !/^\d{4}-\d{2}-\d{2}$/.test(date) ? (
-                    <p className="text-bad text-[12.5px]">Pick a date or tap Not sure.</p>
+                    <p className="text-[12.5px] text-bad">Pick a date or tap Not sure.</p>
                   ) : null}
                 </>
               )}
             </div>
 
             <div className="flex flex-col gap-2">
-              <span className="text-muted text-[13px]">Who watched?</span>
-              <div className="border-line bg-surface flex gap-1.5 rounded-xl border p-1">
+              <span className="text-[13px] text-muted">Who watched?</span>
+              <div className="flex gap-1.5 rounded-xl border border-line bg-surface p-1">
                 {watchOptions.map((option) => (
                   <button
                     key={option.id}
                     type="button"
                     className={cn(
-                      "text-muted flex-1 rounded-[9px] px-2 py-2 text-[13px] font-semibold transition-colors",
-                      watchMode === option.id && "bg-surface-2 text-ink ring-accent/45 ring-1",
+                      "flex-1 rounded-[9px] px-2 py-2 text-[13px] font-semibold text-muted transition-colors",
+                      watchMode === option.id && "bg-surface-2 text-ink ring-1 ring-accent/45",
                     )}
                     aria-pressed={watchMode === option.id}
                     onClick={() => chooseWatchMode(option)}
@@ -345,21 +345,21 @@ export function LogSheet({
                 ))}
               </div>
               {entries.length < 3 ? (
-                <p className="text-muted text-[12.5px]">
+                <p className="text-[12.5px] text-muted">
                   Together means you both rate it; solo counts only for that person.
                 </p>
               ) : null}
             </div>
 
             <div className="flex flex-col gap-2">
-              <span className="text-muted text-[13px]">Who picked it?</span>
-              <div className="border-line bg-surface flex gap-1.5 rounded-xl border p-1">
+              <span className="text-[13px] text-muted">Who picked it?</span>
+              <div className="flex gap-1.5 rounded-xl border border-line bg-surface p-1">
                 {people.length > 1 ? (
                   <button
                     type="button"
                     className={cn(
-                      "text-muted flex-1 rounded-[9px] px-2 py-2 text-[13px] font-semibold transition-colors",
-                      pickedTogether && "bg-surface-2 text-ink ring-accent/45 ring-1",
+                      "flex-1 rounded-[9px] px-2 py-2 text-[13px] font-semibold text-muted transition-colors",
+                      pickedTogether && "bg-surface-2 text-ink ring-1 ring-accent/45",
                     )}
                     aria-pressed={pickedTogether}
                     onClick={() => {
@@ -375,10 +375,10 @@ export function LogSheet({
                     key={person.id}
                     type="button"
                     className={cn(
-                      "text-muted flex-1 rounded-[9px] px-2 py-2 text-[13px] font-semibold transition-colors",
+                      "flex-1 rounded-[9px] px-2 py-2 text-[13px] font-semibold text-muted transition-colors",
                       !pickedTogether &&
                         pickedBy === person.id &&
-                        "bg-surface-2 text-ink ring-accent/45 ring-1",
+                        "bg-surface-2 text-ink ring-1 ring-accent/45",
                     )}
                     aria-pressed={!pickedTogether && pickedBy === person.id}
                     onClick={() => {
@@ -394,7 +394,7 @@ export function LogSheet({
 
             {watcherPeople.map((person) => (
               <div key={person.id} className="flex flex-col gap-2">
-                <span className="text-muted text-[13px]">
+                <span className="text-[13px] text-muted">
                   {nameFor(person.id)}
                   {canEditScore(person.id, watchers) ? "" : " — waiting for them"}
                 </span>
@@ -408,7 +408,7 @@ export function LogSheet({
             ))}
 
             <div className="flex flex-col gap-2">
-              <label className="text-muted text-[13px]" htmlFor="watch-note">
+              <label className="text-[13px] text-muted" htmlFor="watch-note">
                 Note
               </label>
               <Textarea
@@ -428,7 +428,7 @@ export function LogSheet({
             </div>
           </>
         ) : (
-          <p className="text-muted py-8 text-center text-sm">Could not load this title.</p>
+          <p className="py-8 text-center text-sm text-muted">Could not load this title.</p>
         )}
       </DrawerContent>
     </Drawer>

@@ -19,14 +19,14 @@ least `TMDB_API_KEY` are required. Without Supabase config the app renders `Setu
 | ------------------- | ----------------------------------------------------------------- |
 | `npm run dev`       | Vite dev server + `/api/catalog` mounted as dev middleware        |
 | `npm run build`     | `tsc -b` then Vite production build                               |
-| `npm run lint`      | ESLint flat config (typescript-eslint, react-hooks, Prettier)     |
-| `npm run format`    | Prettier write (`format:check` is what CI enforces)               |
+| `npm run lint`      | Oxlint defaults + React + type-aware checks (zero warnings)       |
+| `npm run format`    | Oxfmt write (`format:check` is what CI enforces)                  |
 | `npm run typecheck` | `tsc -b`                                                          |
 | `npm test`          | Vitest (`tests/**/*.test.ts`)                                     |
 | `npm run icons`     | Regenerates PWA PNGs from the geometry in `scripts/make-icon.mjs` |
 
 Run `npm run format && npm run lint && npm run typecheck && npm test && npm run build` before
-finishing any change. All five must pass; lint warnings are allowed but errors are not.
+finishing any change. All five must pass with zero errors and zero warnings. Also run `npm run format:check` and `npm run check:bundle`.
 
 ## Environment
 
@@ -62,8 +62,8 @@ src/lib/dates.ts        Local calendar dates (date-only values, never UTC-shifte
 src/lib/api.ts          Browser client for /api/catalog + poster URL + Title helpers
 src/lib/retry.ts        Retry/backoff wrapper (`retryWrite`) for Supabase writes
 src/lib/supabase.ts     Client + isSupabaseConfigured (App shows SetupGate when absent)
-src/hooks/              useAuth (Supabase Google auth), useViewTransition, useCountUp, useToast
-src/components/         Poster, Backdrop, ScoreChip (+scoreBand), RatingPicker, WatchCard,
+src/hooks/              useAuth (Supabase Google auth), useStore, useViewTransition, useCountUp, useToast
+src/components/         Poster, Backdrop, ScoreChip, RatingPicker, WatchCard,
                         LogSheet, DiscoveryRow, DiscoverySheet, WhereToWatch, BarList,
                         ActivityHeatmap, StartChecklist, SignInGate, SetupGate, OnboardingGate,
                         Logo, ErrorBoundary, ToastProvider
@@ -108,8 +108,12 @@ Rules that keep this codebase coherent:
   `public/icon.svg` (favicon), `public/logo.svg` (lockup), `src/components/Logo.tsx` (in-app) and
   `scripts/make-icon.mjs` (PNG rasteriser, `npm run icons`). Change all four together.
 - Path alias `@/` → `src/`. No relative imports inside `src/`.
-- Prettier runs `prettier-plugin-tailwindcss`, so utility order is automatic — never hand-sort.
-- TypeScript is pinned to `~6.0.3` because typescript-eslint does not support TS 7 yet.
+- Oxfmt sorts Tailwind utilities using `src/styles.css`, including `cn()` / `cva()` calls; never hand-sort.
+- Keep `.oxlintrc.json` on Oxc’s default rules. Configure plugins/environment/options only; do not
+  expand presets into individual rules or suppress diagnostics to pass checks.
+- Oxfmt uses default formatting options; its config only adds Tailwind sorting and ignored assets.
+- TypeScript `~6.0.3` remains the app build/typecheck compiler. Oxlint uses its own native
+  TypeScript engine through `oxlint-tsgolint` for type-aware linting.
 
 ## UI copy and file conventions
 
@@ -211,7 +215,7 @@ for remote changes (CLI v3 defaults to the local stack) and keep `supabase/.temp
   every render.
 - `activityHeatmap`/`predictionAccuracy`/`buildInsights` must stay linear; `predictionAccuracy`
   uses aggregate-subtract leave-one-out (no per-entry profile rebuilds). Keep an eye on the
-  `react-hooks/preserve-manual-memoization` lint rule — if it fires on a `useMemo`, the compiler
+  `react/preserve-manual-memoization` lint rule — if it fires on a `useMemo`, the compiler
   can't verify the deps, so compute the value inline instead of forcing the memo.
 - The service worker (vite-plugin-pwa) precaches the shell and stale-while-revalidates TMDB
   images; `/api/catalog` is network-first with a 5 s timeout. `manifest: false` because the
@@ -228,11 +232,12 @@ for remote changes (CLI v3 defaults to the local stack) and keep `supabase/.temp
 - Backups (`.github/workflows/backup.yml`): weekly and manual `supabase db dump` of the `public`
   schema and data, uploaded as a 30-day workflow artifact; same secrets as the migrate workflow.
   Restore steps live in the README's Backups section.
-- There are 3 accepted `react-refresh/only-export-components` warnings (store + two component
-  files). Do not silence them by weakening the rule config.
+- No lint warnings are accepted: scripts enforce `--max-warnings 0`. Store context/types live in
+  `src/lib/store/context.ts`, `useStore` in `src/hooks/useStore.ts`, and `scoreBand` in analytics,
+  keeping component modules valid Fast Refresh boundaries.
 - Node must satisfy `package.json` engines (`^22.22.2 || ^24.15.0 || >=26.0.0`), including the jsdom 31 minimum.
 - Dependency policy: keep npm packages and workflow actions on their latest releases. Two
-  deliberate exceptions: TypeScript stays on `6.x` (typescript-eslint's peer range is `<6.1.0`), and
+  deliberate exceptions: the build compiler stays on `6.x` (compiler upgrades are separate from lint/format tooling), and
   `@types/node` tracks the newest Node even though CI runs LTS/latest runtimes.
 - `workbox-build` currently needs a scoped `glob: 14.0.6` override for upstream security fixes;
   its own `^11` range cannot select the patched release. Remove the override when upstream fixes
@@ -242,7 +247,7 @@ for remote changes (CLI v3 defaults to the local stack) and keep `supabase/.temp
 
 Shipped: per-person profiles (watchers + RLS), invite codes, **multi-household tenancy with
 invite-gated household creation**, Up Next with dropped tracking, year filters, Year in Review with
-copy-recap text, taste engine (predictions, Tonight's pick, accuracy), ESLint/Prettier/CI/migration
+copy-recap text, taste engine (predictions, Tonight's pick, accuracy), Oxlint/Oxfmt/CI/migration
 workflows, icon + wordmark (`public/icon.svg`, `public/logo.svg`, kept in sync with
 `scripts/make-icon.mjs`), deploy hardening (local-date fix, ErrorBoundary, API timeouts +
 same-origin gate + edge cache, TMDB/OMDb attribution, `noindex`, README deploy checklist), and the

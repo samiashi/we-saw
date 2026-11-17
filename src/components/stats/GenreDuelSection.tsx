@@ -17,7 +17,7 @@ export function GenreDuelSection({
     <section className="flex flex-col gap-2.5">
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="text-[17px] font-semibold">Genre duel</h2>
-        <span className="text-muted text-[13px]">
+        <span className="text-[13px] text-muted">
           {pairNames[0]} vs {pairNames[1]} · joint watches
         </span>
       </div>
@@ -31,7 +31,7 @@ export function GenreDuelSection({
           >
             <span className="truncate text-left">{row.name}</span>
             <span className="flex h-2.5 items-center gap-0.5">
-              <span className="bg-surface-2 flex h-full flex-1 justify-end overflow-hidden rounded-l-full">
+              <span className="flex h-full flex-1 justify-end overflow-hidden rounded-l-full bg-surface-2">
                 {row.gap < 0 ? (
                   <span
                     className="h-full rounded-l-full bg-[#a48cff]"
@@ -39,16 +39,16 @@ export function GenreDuelSection({
                   />
                 ) : null}
               </span>
-              <span className="bg-surface-2 flex h-full flex-1 overflow-hidden rounded-r-full">
+              <span className="flex h-full flex-1 overflow-hidden rounded-r-full bg-surface-2">
                 {row.gap > 0 ? (
                   <span
-                    className="bg-accent h-full rounded-r-full"
+                    className="h-full rounded-r-full bg-accent"
                     style={{ width: `${(Math.abs(row.gap) / duelMax) * 100}%` }}
                   />
                 ) : null}
               </span>
             </span>
-            <span className="text-muted text-xs whitespace-nowrap">
+            <span className="text-xs whitespace-nowrap text-muted">
               {row.avgA} vs {row.avgB}
             </span>
           </button>

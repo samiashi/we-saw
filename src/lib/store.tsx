@@ -1,13 +1,5 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { StoreContext, type WeSawStore, type AddToListResult } from "@/lib/store/context";
 import { useAuth } from "@/hooks/useAuth";
 import { buildEntries } from "@/lib/analytics";
 import { fetchTonightPicks } from "@/lib/api";
@@ -32,69 +24,16 @@ import { createRealtimeHandlers } from "@/lib/store/realtime";
 import { supabase } from "@/lib/supabase";
 import type {
   AppInvite,
-  Entry,
   Household,
   InviteCode,
   ListItem,
   ListStatus,
   LogInput,
-  Person,
   Rating,
   Title,
   Watch,
   WeSawData,
-  TonightPreferences,
-  TonightResult,
 } from "@/lib/types";
-
-export type AddToListResult = "added" | "exists" | "failed";
-
-export interface WeSawStore {
-  ready: boolean;
-  requestTonightPicks: (
-    preferences: TonightPreferences,
-    signal: AbortSignal,
-  ) => Promise<TonightResult>;
-  people: Person[];
-  userId: string | null;
-  household: Household | null;
-  needsOnboarding: boolean;
-  partnerJoined: boolean;
-  clearPartnerJoined: () => void;
-  signedOut: boolean;
-  syncError: string;
-  clearSyncError: () => void;
-  titles: Record<string, Title>;
-  entries: Entry[];
-  listItems: ListItem[];
-  addToList: (title: Title) => Promise<AddToListResult>;
-  setListStatus: (itemId: string, status: ListStatus) => Promise<boolean>;
-  removeFromList: (itemId: string) => Promise<boolean>;
-  nameFor: (userId: string) => string;
-  canEditScore: (userId: string, watchers: string[]) => boolean;
-  logWatch: (input: LogInput) => Promise<boolean>;
-  setRating: (watchId: string, userId: string, score: number) => Promise<boolean>;
-  removeWatch: (watchId: string) => Promise<boolean>;
-  patchTitle: (key: string, patch: Partial<Title>) => Promise<void>;
-  renamePerson: (personId: string, name: string) => Promise<void>;
-  renameHousehold: (name: string) => Promise<void>;
-  invites: InviteCode[];
-  createInvite: () => Promise<string | null>;
-  revokeInvite: (code: string) => Promise<boolean>;
-  redeemInvite: (code: string, displayName: string) => Promise<string | null>;
-  appInvites: AppInvite[];
-  createAppInvite: () => Promise<string | null>;
-  revokeAppInvite: (code: string) => Promise<boolean>;
-  createHousehold: (
-    householdName: string,
-    displayName: string,
-    inviteCode: string,
-  ) => Promise<string | null>;
-  refresh: () => Promise<void>;
-  auth: ReturnType<typeof useAuth>;
-}
-
-const StoreContext = createContext<WeSawStore | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
@@ -830,10 +769,4 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
-}
-
-export function useStore(): WeSawStore {
-  const store = useContext(StoreContext);
-  if (!store) throw new Error("useStore must be used inside StoreProvider");
-  return store;
 }

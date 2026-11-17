@@ -3,7 +3,7 @@ import { LogoLockup } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { clearInviteCode, readInviteCode } from "@/lib/invite";
-import { useStore } from "@/lib/store";
+import { useStore } from "@/hooks/useStore";
 import { cn } from "@/lib/utils";
 
 function friendlyError(message: string): string {
@@ -54,17 +54,17 @@ export function OnboardingGate() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-6">
-      <div className="border-line bg-surface flex w-full max-w-[420px] flex-col items-center gap-4 rounded-[20px] border p-6 text-center">
+      <div className="flex w-full max-w-[420px] flex-col items-center gap-4 rounded-[20px] border border-line bg-surface p-6 text-center">
         <LogoLockup size={36} />
         <h1 className="text-xl font-bold">Set up your log</h1>
 
         {storedInvite ? (
-          <p className="text-good text-[13px]">
+          <p className="text-[13px] text-good">
             You've been invited — the code is filled in below, just add your name.
           </p>
         ) : null}
 
-        <div className="border-line bg-surface flex w-full gap-1.5 rounded-xl border p-1">
+        <div className="flex w-full gap-1.5 rounded-xl border border-line bg-surface p-1">
           {(
             [
               ["join", "Join with a code"],
@@ -75,8 +75,8 @@ export function OnboardingGate() {
               key={value}
               type="button"
               className={cn(
-                "text-muted flex-1 rounded-[9px] px-2.5 py-2 text-[13px] font-semibold transition-colors",
-                mode === value && "bg-surface-2 text-ink ring-accent/45 ring-1",
+                "flex-1 rounded-[9px] px-2.5 py-2 text-[13px] font-semibold text-muted transition-colors",
+                mode === value && "bg-surface-2 text-ink ring-1 ring-accent/45",
               )}
               onClick={() => setMode(value)}
             >
@@ -87,7 +87,7 @@ export function OnboardingGate() {
 
         {mode === "join" ? (
           <>
-            <p className="text-muted text-[13px]">
+            <p className="text-[13px] text-muted">
               Ask your partner or friend for the code from their We Saw settings.
             </p>
             <Input
@@ -107,7 +107,7 @@ export function OnboardingGate() {
           </>
         ) : (
           <>
-            <p className="text-muted text-[13px]">
+            <p className="text-[13px] text-muted">
               First time here? Create a household. If someone invited you to We Saw, use their link
               instead.
             </p>
@@ -137,7 +137,7 @@ export function OnboardingGate() {
           </>
         )}
 
-        {error ? <p className="text-bad text-[13px]">{error}</p> : null}
+        {error ? <p className="text-[13px] text-bad">{error}</p> : null}
         <Button variant="ghost" className="w-full" onClick={() => void auth.signOut()}>
           Sign out
         </Button>

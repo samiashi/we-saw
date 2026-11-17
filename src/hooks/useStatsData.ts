@@ -33,7 +33,7 @@ import {
   yearsPresent,
   type Scorer,
 } from "@/lib/analytics";
-import { useStore } from "@/lib/store";
+import { useStore } from "@/hooks/useStore";
 
 export function useStatsData({
   scopeId,

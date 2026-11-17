@@ -9,21 +9,21 @@ import {
   DrawerDescription,
 } from "@/components/ui/drawer";
 import { TonightPicker } from "@/components/TonightPicker";
-import { useStore } from "@/lib/store";
+import { useStore } from "@/hooks/useStore";
 import type { Title } from "@/lib/types";
 
 export function TonightSection({ onOpen }: { onOpen: (title: Title) => void }) {
   const { entries, people, household, userId, requestTonightPicks } = useStore();
   const [open, setOpen] = useState(false);
   return (
-    <section className="border-accent/30 bg-accent/5 flex flex-col gap-3 rounded-2xl border p-4">
+    <section className="flex flex-col gap-3 rounded-2xl border border-accent/30 bg-accent/5 p-4">
       <div className="flex items-start gap-3">
-        <div className="bg-accent/10 text-accent rounded-xl p-2.5">
+        <div className="rounded-xl bg-accent/10 p-2.5 text-accent">
           <Sparkles size={20} />
         </div>
         <div className="flex-1">
           <h2 className="text-[17px] font-semibold">Discover your next watch</h2>
-          <p className="text-muted mt-1 text-sm">
+          <p className="mt-1 text-sm text-muted">
             New movies and shows, inspired by everything you’ve watched and rated.
           </p>
         </div>
@@ -36,7 +36,7 @@ export function TonightSection({ onOpen }: { onOpen: (title: Title) => void }) {
         </DrawerTrigger>
         {open ? (
           <DrawerContent aria-describedby="tonight-description">
-            <header className="bg-surface sticky top-0 z-10 -mx-4 flex items-center justify-between gap-3 px-4 pb-3">
+            <header className="sticky top-0 z-10 -mx-4 flex items-center justify-between gap-3 bg-surface px-4 pb-3">
               <DrawerTitle className="text-xl font-semibold">Find something new</DrawerTitle>
               <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
                 Close

@@ -68,12 +68,13 @@ For AI picks, apply the `tonight_usage` migration and set `OPENAI_API_KEY` in Ve
 
 ## Checks & automation
 
-Use Node matching `package.json` engines (Node 22.22.2+, 24.15.0+, or 26+ on those supported lines). Dependencies and GitHub Actions were refreshed on 17 November 2026. TypeScript stays on 6.0.3 because `typescript-eslint` 8.73.0 supports `<6.1.0`. The scoped `workbox-build` override uses `glob` 14.0.6 to pick up fixes unavailable in Workbox's `^11` range; remove it when Workbox updates its dependency. See the [Glob advisory](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4).
+Use Node matching `package.json` engines (Node 22.22.2+, 24.15.0+, or 26+ on those supported lines). Dependencies and GitHub Actions were refreshed on 17 November 2026. TypeScript 6.0.3 remains the separate build/typecheck compiler. The scoped `workbox-build` override uses `glob` 14.0.6 to pick up fixes unavailable in Workbox's `^11` range; remove it when Workbox updates its dependency. See the [Glob advisory](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4).
 
 ```bash
-npm run lint          # ESLint (flat config: typescript-eslint + react-hooks, Prettier-compatible)
-npm run format        # Prettier write
-npm run format:check  # Prettier check (used by CI)
+npm run lint          # Oxlint defaults, React and type-aware checks; zero warnings
+npm run lint:fix      # Oxlint safe fixes
+npm run format        # Oxfmt write, including Tailwind sorting
+npm run format:check  # Oxfmt check (used by CI)
 npm run typecheck     # tsc
 npm test              # Vitest
 ```

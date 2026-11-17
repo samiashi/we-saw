@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { fetchTitleDetails, titleToSummary } from "@/lib/api";
-import { useStore } from "@/lib/store";
+import { useStore } from "@/hooks/useStore";
 import { useToast } from "@/hooks/useToast";
 
 export function useTitleEnrichment() {
