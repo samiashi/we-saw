@@ -146,6 +146,7 @@ export default defineConfig(({ mode }) => {
           manualChunks(id) {
             if (!id.includes("node_modules")) return;
             if (id.includes("/react/") || id.includes("/react-dom/")) return "react";
+            if (id.includes("/victory-vendor/")) return "chart-scales";
             if (
               id.includes("/@supabase/") ||
               id.includes("/@noble/") ||
