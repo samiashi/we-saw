@@ -30,6 +30,7 @@ observed patterns, not predictions, causal conclusions, or statistical confidenc
 ## Model and access
 
 - GPT-6.2 Sol, medium reasoning, Responses API, strict structured output, `store: false`.
+- The first developer message holds the reusable task and writing rules. The user message contains the filters and anonymous metric evidence. [OpenAI’s GPT-6.2 migration guide](https://developers.openai.com/api/docs/guides/latest-model#migration-quickstart).
 - The model chooses supplied metric IDs and writes short explanations. The server rejects
   unknown IDs, duplicate references, malformed/refused/incomplete results, and duplicate cards.
   Exact averages, counts, viewer identities, and supporting watches come from server data.

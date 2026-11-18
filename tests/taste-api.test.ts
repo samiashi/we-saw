@@ -55,7 +55,7 @@ function setup() {
       if (url.pathname.endsWith("/consume_tonight_request")) return Response.json(state.quota);
       if (url.hostname === "api.openai.com") {
         if (state.modelFailure) return Response.json({}, { status: 500 });
-        const context = JSON.parse(body.input);
+        const context = JSON.parse(body.input[1].content);
         return Response.json({
           status: "completed",
           output: [
@@ -101,7 +101,7 @@ function setup() {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Taste API", () => {
-  it("reads every short page, uses Sol low, and sends anonymous aggregates without notes", async () => {
+  it("reads every short page and sends anonymous aggregates as user data", async () => {
     const { request, calls } = setup();
     const response = await handleCatalog(request);
     expect(response.status).toBe(200);
@@ -121,8 +121,12 @@ describe("Taste API", () => {
       model: "gpt-6.2-sol",
       reasoning: { effort: "medium" },
       store: false,
+      input: [
+        { role: "developer", content: expect.any(String) },
+        { role: "user", content: expect.any(String) },
+      ],
     });
-    const input = String(model.input);
+    const input = JSON.stringify(model.input);
     expect(input).not.toContain("Never send my note");
     expect(input).not.toContain("home-a");
     expect(input).not.toContain("user_id");
@@ -138,9 +142,10 @@ describe("Taste API", () => {
       body: { scopeId: "a", year: "2026", type: "movie" },
     });
     expect(response.body).toMatchObject({ historyCount: 2, ratedCount: 2 });
-    const input = JSON.parse(
-      String(calls.find((c) => c.url.includes("api.openai.com"))!.body!.input),
-    );
+    const messages = calls.find((c) => c.url.includes("api.openai.com"))!.body!.input as {
+      content: string;
+    }[];
+    const input = JSON.parse(messages[1].content);
     expect(input.filters).toEqual({ scope: "solo", year: "2026", type: "movie" });
     expect(input.profiles).toHaveLength(1);
     expect(

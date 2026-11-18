@@ -181,11 +181,17 @@ describe("Tonight API", () => {
       model: "gpt-6.2-sol",
       reasoning: { effort: "medium" },
       store: false,
+      input: [
+        { role: "developer", content: expect.any(String) },
+        { role: "user", content: expect.any(String) },
+      ],
     });
-    expect(sent.input).not.toContain("person-a");
-    expect(sent.input).not.toContain("home-a");
-    expect(sent.input).not.toContain("Private note");
-    const context = JSON.parse(sent.input);
+    expect(sent.input[0].content).not.toContain(request.body.mood);
+    expect(JSON.stringify(sent.input)).not.toContain("person-a");
+    expect(JSON.stringify(sent.input)).not.toContain("home-a");
+    expect(JSON.stringify(sent.input)).not.toContain("Private note");
+    const context = JSON.parse(sent.input[1].content);
+    expect(context.preferences.mood).toBe(request.body.mood);
     expect(calls.some((c) => c.url.includes("list_items"))).toBe(false);
     expect(context.historyCount).toBe(1);
     expect(context.taste[0].facets.cast).toMatchObject([{ name: "A performer", meanRating: 9 }]);
@@ -226,7 +232,7 @@ describe("Tonight API", () => {
     expect(result.status).toBe(200);
     expect(result.body).toMatchObject({ historyCount: 205, ratedCount: 205 });
     const context = JSON.parse(
-      JSON.parse(calls.find((c) => c.url.includes("openai.com"))!.body).input,
+      JSON.parse(calls.find((c) => c.url.includes("openai.com"))!.body).input[1].content,
     );
     expect(context.taste[0].ratedWatches).toBe(205);
     expect(context.taste[1].ratedWatches).toBe(0); // Non-watchers cannot supply taste evidence.
