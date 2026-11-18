@@ -178,8 +178,8 @@ describe("Tonight API", () => {
     });
     const sent = JSON.parse(calls.find((c) => c.url.includes("openai.com"))!.body);
     expect(sent).toMatchObject({
-      model: "gpt-6.1-sol",
-      reasoning: { effort: "low" },
+      model: "gpt-6.2-sol",
+      reasoning: { effort: "medium" },
       store: false,
     });
     expect(sent.input).not.toContain("person-a");

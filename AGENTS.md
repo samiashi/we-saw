@@ -30,14 +30,14 @@ finishing any change. All five must pass with zero errors and zero warnings. Als
 
 ## Environment
 
-| Variable                        | Used by                      | Notes                                                                  |
-| ------------------------------- | ---------------------------- | ---------------------------------------------------------------------- |
-| `TMDB_API_KEY`                  | `server/catalog.js` (server) | Free key, themoviedb.org Settings → API                                |
-| `OMDB_API_KEY`                  | `server/catalog.js` (server) | Free key, omdbapi.com/apikey.aspx                                      |
-| `OPENAI_API_KEY`                | server only                  | Optional AI picks; GPT-6.1 Sol, low reasoning; never prefix with VITE_ |
-| `VITE_SUPABASE_URL`             | browser                      | Required; absent ⇒ `SetupGate`                                         |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | browser                      | `VITE_SUPABASE_ANON_KEY` also accepted; required                       |
-| `VITE_SITE_URL`                 | browser                      | OAuth redirect base; defaults to `window.origin`                       |
+| Variable                        | Used by                      | Notes                                                                     |
+| ------------------------------- | ---------------------------- | ------------------------------------------------------------------------- |
+| `TMDB_API_KEY`                  | `server/catalog.js` (server) | Free key, themoviedb.org Settings → API                                   |
+| `OMDB_API_KEY`                  | `server/catalog.js` (server) | Free key, omdbapi.com/apikey.aspx                                         |
+| `OPENAI_API_KEY`                | server only                  | Optional AI picks; GPT-6.2 Sol, medium reasoning; never prefix with VITE_ |
+| `VITE_SUPABASE_URL`             | browser                      | Required; absent ⇒ `SetupGate`                                            |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | browser                      | `VITE_SUPABASE_ANON_KEY` also accepted; required                          |
+| `VITE_SITE_URL`                 | browser                      | OAuth redirect base; defaults to `window.origin`                          |
 
 Never move `TMDB_API_KEY` / `OMDB_API_KEY` / `OPENAI_API_KEY` client-side. New third-party calls go through
 `server/catalog.js` and are exposed as `?action=` endpoints via `api/catalog.js` (Vercel) and the
@@ -276,7 +276,7 @@ that was still leaving), load-generation guards and per-user ready state, optimi
 merges, persisted-value rating rollback, `addToList` result states, air-date caching honesty, the
 missing TMDB TV genre 10765, search debounce races, and the queue/rewatch/affinity analytics fixes.
 
-Implemented November 2026: full-history “Find something new” discovery in the Log tab with GPT-6.1 Sol at low reasoning,
+Implemented November 2026: full-history “Find something new” discovery in the Log tab with GPT-6.2 Sol at medium reasoning,
 authenticated POST `action=tonight`, paginated full household history, anonymous per-viewer taste
 summaries, TMDB candidate retrieval, structured output validation, runtime/type filters, session
 skips, and cancellation. It does not read Up Next; all logged titles (including unrated ones) are
@@ -288,7 +288,7 @@ RPC; it has no browser store collection or realtime subscription. The quota migr
 and verified on the linked production project on 17 November 2026. New deployments still need it
 before enabling AI. See `docs/ai-tonight.md` for research, privacy, and rollout details.
 
-Implemented November 2026: Stats → Analyze my taste uses `action=taste` and GPT-6.1 Sol at low
+Implemented November 2026: Stats → Analyze my taste uses `action=taste` and GPT-6.2 Sol at medium
 reasoning. `server/taste.js` verifies membership, reads all household history with keyset pagination,
 and applies the exact joint/solo, watch-year and movie/TV filters. `server/tasteContext.js` prepares
 bounded metric evidence from complete aggregates; `server/tasteModel.js` validates structured

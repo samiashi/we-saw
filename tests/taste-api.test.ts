@@ -118,8 +118,8 @@ describe("Taste API", () => {
     ).toBe(true);
     const model = calls.find((c) => c.url.includes("api.openai.com"))!.body!;
     expect(model).toMatchObject({
-      model: "gpt-6.1-sol",
-      reasoning: { effort: "low" },
+      model: "gpt-6.2-sol",
+      reasoning: { effort: "medium" },
       store: false,
     });
     const input = String(model.input);
